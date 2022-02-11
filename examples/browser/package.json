@@ -1,0 +1,22 @@
+{
+  "name": "browser-example",
+  "version": "1.0.0",
+  "description": "A browser example for trzsz.js",
+  "main": "app.js",
+  "private": true,
+  "scripts": {
+    "start": "node app.js"
+  },
+  "author": "Lonny Wong",
+  "license": "MIT",
+  "dependencies": {
+    "trzsz": "file:../..",
+    "xterm": "^4.17.0",
+    "xterm-addon-fit": "^0.5.0"
+  },
+  "devDependencies": {
+    "express": "^4.17.2",
+    "express-ws": "^5.0.2",
+    "node-pty": "^0.10.1"
+  }
+}

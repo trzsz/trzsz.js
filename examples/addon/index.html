@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+  <title>Addon example for trzsz</title>
+  <head>
+    <link rel="stylesheet" href="node_modules/xterm/css/xterm.css" />
+    <style>
+      html, body, #terminal {
+        margin: 1px;
+        height: 100%;
+        background-color: #000;
+      }
+    </style>
+    <script src="node_modules/xterm/lib/xterm.js"></script>
+    <script src="node_modules/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+    <script src="node_modules/xterm-addon-attach/lib/xterm-addon-attach.js"></script>
+  </head>
+  <body>
+    <div id="terminal"></div>
+    <script src="example.js"></script>
+    <script>
+      InitAddonExample(document.getElementById("terminal"));
+    </script>
+  </body>
+</html>
