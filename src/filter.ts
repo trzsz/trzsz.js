@@ -38,6 +38,11 @@ export interface TrzszCallback {
 }
 
 /**
+ * Trzsz magic key regular expression
+ */
+const trzszMagicKeyRegExp = new RegExp(/::TRZSZ:TRANSFER:([SR]):(\d+\.\d+\.\d+)(:\d+)?/);
+
+/**
  * Trzsz current status
  */
 enum TrzszStatus {
@@ -78,7 +83,11 @@ export class TrzszFilter {
    * @param {string} output - The server output.
    */
   public processServerOutput(output: string | ArrayBuffer | Blob): void {
-    // TODO process the server output
+    if (this.isTransferringFiles()) {
+      // TODO do transferring files
+      return;
+    }
+    this.detectTrzszMagicKey(output);
     this.writeToTerminal(output);
   }
 
@@ -142,5 +151,62 @@ export class TrzszFilter {
 
   private isRunningInBrowser(): boolean {
     return typeof require === "undefined";
+  }
+
+  private async detectTrzszMagicKey(output: string | ArrayBuffer | Blob) {
+    let buffer;
+    if (typeof output === "string") {
+      buffer = output;
+    } else if (output instanceof ArrayBuffer) {
+      buffer = String.fromCharCode.apply(null, new Uint8Array(output));
+    } else if (output instanceof Blob) {
+      buffer = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsText(output, "ISO-8859-1");
+      });
+    }
+
+    const found = buffer.match(trzszMagicKeyRegExp);
+    if (found) {
+      if (found[1] === "S") {
+        this.handleTrzszDownloadFiles(found[2]);
+      } else if (found[1] === "R") {
+        this.handleTrzszUploadFiles(found[2]);
+      }
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private async handleTrzszDownloadFiles(version: string) {
+    if (this.isRunningInBrowser()) {
+      // TODO save files to memory
+    } else {
+      const savePath = await this.chooseSaveDirectory();
+      if (!savePath) {
+        this.cancelTransferringFiles();
+        return;
+      }
+      console.log(`save to: ${savePath}`);
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private async handleTrzszUploadFiles(version: string) {
+    if (this.isRunningInBrowser()) {
+      // TODO open dialog in browser
+    } else {
+      const filePaths = await this.chooseSendFiles();
+      if (!filePaths || !filePaths.length) {
+        this.cancelTransferringFiles();
+        return;
+      }
+      console.log(`save to: ${filePaths}`);
+    }
+  }
+
+  private async cancelTransferringFiles() {
+    // TODO cancel transferring files
+    console.log("Cancelled.");
   }
 }
