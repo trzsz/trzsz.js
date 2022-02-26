@@ -16,11 +16,11 @@ InitAddonExample = (terminal) => {
       const id = data.id;
       const ws = new WebSocket(`ws://${location.host}/shell/ws/${id}`);
 
-      const attach = new AttachAddon.AttachAddon(ws);
+      const trzsz = new TrzszAddon(ws);
       const fit = new FitAddon.FitAddon();
 
       const term = new Terminal();
-      term.loadAddon(attach);
+      term.loadAddon(trzsz);
       term.loadAddon(fit);
       term.open(terminal);
 

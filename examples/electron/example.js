@@ -23,10 +23,26 @@ InitElectronExapmle = (terminal) => {
     rows: term.rows,
   });
 
-  pty.on("data", (data) => term.write(data));
-  term.onData((data) => pty.write(data));
+  const trzsz = window.newTrzsz(
+    // write the server output to the terminal
+    (output) => term.write(output),
+    // send the user input to the server
+    (input) => pty.write(input),
+    // the terminal columns
+    term.cols
+  );
 
-  term.onResize((size) => pty.resize(size.cols, size.rows));
+  // let trzsz process the server output
+  pty.on("data", (data) => trzsz.processServerOutput(data));
+  // let trzsz process the user input
+  term.onData((data) => trzsz.processTerminalInput(data));
+  term.onBinary((data) => trzsz.processBinaryInput(data));
+
+  term.onResize((size) => {
+    pty.resize(size.cols, size.rows);
+    // tell trzsz the terminal columns has been changed
+    trzsz.setTerminalColumns(term.cols);
+  });
   window.addEventListener("resize", () => fit.fit());
 
   term.focus();

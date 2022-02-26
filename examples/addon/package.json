@@ -17,7 +17,6 @@
   "devDependencies": {
     "express": "^4.17.2",
     "express-ws": "^5.0.2",
-    "node-pty": "^0.10.1",
-    "xterm-addon-attach": "^0.6.0"
+    "node-pty": "^0.10.1"
   }
 }

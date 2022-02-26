@@ -18,10 +18,29 @@ InitBrowserExample = (terminal) => {
 
   const ws = new WebSocket(`ws://${location.host}/ws/shell?cols=${term.cols}&rows=${term.rows}`);
 
-  ws.addEventListener("message", (e) => term.write(e.data));
-  term.onData((data) => ws.send(JSON.stringify({ input: data })));
+  // initialize trzsz filter
+  const trzsz = new TrzszFilter(
+    {
+      // write the server output to the terminal
+      writeToTerminal: (output) => term.write(output),
+      // send the user input to the server
+      sendToServer: (data) => ws.send(JSON.stringify({ input: data })),
+    },
+    // the terminal columns
+    term.cols
+  );
 
-  term.onResize((size) => ws.send(JSON.stringify({ cols: size.cols, rows: size.rows })));
+  // let trzsz process the server output
+  ws.addEventListener("message", (e) => trzsz.processServerOutput(e.data));
+  // let trzsz process the user input
+  term.onData((data) => trzsz.processTerminalInput(data));
+  term.onBinary((data) => trzsz.processBinaryInput(data));
+
+  term.onResize((size) => {
+    ws.send(JSON.stringify({ cols: size.cols, rows: size.rows }));
+    // tell trzsz the terminal columns has been changed
+    trzsz.setTerminalColumns(size.cols);
+  });
   window.addEventListener("resize", () => fit.fit());
 
   term.focus();

@@ -4,7 +4,7 @@
  * @license MIT
  */
 
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain } = require("electron");
 
 const createWindow = () => {
   const { screen } = require("electron");
@@ -18,6 +18,12 @@ const createWindow = () => {
       contextIsolation: false,
       preload: require("path").join(__dirname, "preload.js"),
     },
+  });
+
+  // display native system dialog for opening and saving files.
+  ipcMain.handle("show-open-dialog-sync", async (event, ...args) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    return dialog.showOpenDialogSync(win, ...args);
   });
 
   mainWindow.loadFile("index.html");
