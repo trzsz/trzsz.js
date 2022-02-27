@@ -23,12 +23,21 @@ function decodeBuffer(buf: string): Uint8Array {
   return inflate(Uint8Array.from(atob(buf), (v) => v.charCodeAt(0)));
 }
 
+export async function cleanInput(timeoutMilliseconds: number) {
+  // TODO wait until no server output
+}
+
 export async function sendLine(typ: string, buf: string, writer: TrzszWriter) {
   writer(`#${typ}:${buf}\n`);
 }
 
 export async function sendString(typ: string, buf: string, writer: TrzszWriter) {
   await sendLine(typ, encodeBuffer(buf), writer);
+}
+
+export async function sendExit(msg: string, writer: TrzszWriter) {
+  await cleanInput(200);
+  await sendString("EXIT", msg, writer);
 }
 
 export async function sendAction(confirm: boolean, writer: TrzszWriter) {

@@ -5,6 +5,7 @@
  */
 
 import * as utils from "./utils";
+import * as browser from "./browser";
 
 /**
  * Trzsz callback functions
@@ -145,11 +146,15 @@ export class TrzszFilter {
     if (!this.isTransferringFiles()) {
       return;
     }
-    // TODO stop transferring files
+    this.exitWithMessage("Stopped");
   }
 
   // disable jsdoc for private method
   /* eslint-disable require-jsdoc */
+
+  private exitWithMessage(msg: string): void {
+    utils.sendExit(msg, this.sendToServer).finally(() => (this.currentStatus = TrzszStatus.STANDBY));
+  }
 
   private isRunningInBrowser(): boolean {
     return typeof require === "undefined";
@@ -182,8 +187,19 @@ export class TrzszFilter {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private async handleTrzszDownloadFiles(version: string) {
     if (this.isRunningInBrowser()) {
-      // TODO save files to memory
-      this.cancelTransferringFiles();
+      let saveHandle;
+      try {
+        saveHandle = await browser.selectSaveFile("test.txt");
+      } catch (err) {
+        if (err.name === "AbortError") {
+          this.cancelTransferringFiles();
+          return;
+        }
+        this.exitWithMessage(err.toString());
+        return;
+      }
+      console.log(`save file: ${saveHandle}`);
+      this.currentStatus = TrzszStatus.RECVING;
     } else {
       const savePath = await this.chooseSaveDirectory();
       if (!savePath) {
@@ -191,21 +207,34 @@ export class TrzszFilter {
         return;
       }
       console.log(`save to: ${savePath}`);
+      this.currentStatus = TrzszStatus.RECVING;
     }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private async handleTrzszUploadFiles(version: string) {
     if (this.isRunningInBrowser()) {
-      // TODO open dialog in browser
-      this.cancelTransferringFiles();
+      let sendFiles;
+      try {
+        sendFiles = await browser.selectSendFiles();
+      } catch (err) {
+        if (err.name === "AbortError") {
+          this.cancelTransferringFiles();
+          return;
+        }
+        this.exitWithMessage(err.toString());
+        return;
+      }
+      console.log(`send files: ${sendFiles}`);
+      this.currentStatus = TrzszStatus.SENDING;
     } else {
       const filePaths = await this.chooseSendFiles();
       if (!filePaths || !filePaths.length) {
         this.cancelTransferringFiles();
         return;
       }
-      console.log(`save to: ${filePaths}`);
+      console.log(`send files: ${filePaths}`);
+      this.currentStatus = TrzszStatus.SENDING;
     }
   }
 
