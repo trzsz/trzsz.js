@@ -1,6 +1,15 @@
 import typescript from "@rollup/plugin-typescript";
 import commonjs from "@rollup/plugin-commonjs";
 import { terser } from "rollup-plugin-terser";
+import versionInjector from "rollup-plugin-version-injector";
+
+const version = versionInjector({
+  injectInComments: false,
+  injectInTags: {
+    fileRegexp: /\.(js|mjs)$/,
+    tagId: "VersionInject",
+  },
+});
 
 export default [
   {
@@ -10,7 +19,7 @@ export default [
       format: "cjs",
       sourcemap: true,
     },
-    plugins: [typescript(), commonjs(), terser()],
+    plugins: [version, typescript(), commonjs(), terser({ format: { comments: false } })],
   },
   {
     input: "src/tsz.ts",
@@ -19,7 +28,7 @@ export default [
       format: "cjs",
       sourcemap: true,
     },
-    plugins: [typescript(), commonjs(), terser()],
+    plugins: [version, typescript(), commonjs(), terser({ format: { comments: false } })],
   },
   {
     input: "src/trzsz.ts",
@@ -37,6 +46,6 @@ export default [
         sourcemap: true,
       },
     ],
-    plugins: [typescript(), commonjs(), terser()],
+    plugins: [version, typescript(), commonjs(), terser({ format: { comments: false } })],
   },
 ];

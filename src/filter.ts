@@ -4,6 +4,8 @@
  * @license MIT
  */
 
+import * as utils from "./utils";
+
 /**
  * Trzsz callback functions
  */
@@ -181,6 +183,7 @@ export class TrzszFilter {
   private async handleTrzszDownloadFiles(version: string) {
     if (this.isRunningInBrowser()) {
       // TODO save files to memory
+      this.cancelTransferringFiles();
     } else {
       const savePath = await this.chooseSaveDirectory();
       if (!savePath) {
@@ -195,6 +198,7 @@ export class TrzszFilter {
   private async handleTrzszUploadFiles(version: string) {
     if (this.isRunningInBrowser()) {
       // TODO open dialog in browser
+      this.cancelTransferringFiles();
     } else {
       const filePaths = await this.chooseSendFiles();
       if (!filePaths || !filePaths.length) {
@@ -206,7 +210,6 @@ export class TrzszFilter {
   }
 
   private async cancelTransferringFiles() {
-    // TODO cancel transferring files
-    console.log("Cancelled.");
+    await utils.sendAction(false, this.sendToServer);
   }
 }
