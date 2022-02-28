@@ -117,11 +117,7 @@ export class TrzszFilter {
     if (this.isTransferringFiles()) {
       return; // ignore input while transferring files
     }
-    const buffer = new Uint8Array(input.length);
-    for (let i = 0; i < input.length; ++i) {
-      buffer[i] = input.charCodeAt(i) & 255;
-    }
-    this.sendToServer(buffer);
+    this.sendToServer(Uint8Array.from(input, (v) => v.charCodeAt(0)));
   }
 
   /**
@@ -161,19 +157,10 @@ export class TrzszFilter {
   }
 
   private async detectTrzszMagicKey(output: string | ArrayBuffer | Blob) {
-    let buffer;
-    if (typeof output === "string") {
-      buffer = output;
-    } else if (output instanceof ArrayBuffer) {
-      buffer = String.fromCharCode.apply(null, new Uint8Array(output));
-    } else if (output instanceof Blob) {
-      buffer = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.readAsText(output, "ISO-8859-1");
-      });
+    const buffer = await utils.findTrzszMagicKey(output);
+    if (!buffer) {
+      return;
     }
-
     const found = buffer.match(trzszMagicKeyRegExp);
     if (found) {
       if (found[1] === "S") {

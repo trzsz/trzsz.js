@@ -1,4 +1,6 @@
 {
-  "compilerOptions": {},
+  "compilerOptions": {
+    "esModuleInterop": true
+  },
   "include": ["src/*.ts"]
 }
