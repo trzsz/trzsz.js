@@ -1,6 +1,7 @@
 import typescript from "@rollup/plugin-typescript";
 import commonjs from "@rollup/plugin-commonjs";
 import { terser } from "rollup-plugin-terser";
+import { nodeResolve } from "@rollup/plugin-node-resolve";
 import versionInjector from "rollup-plugin-version-injector";
 
 const version = versionInjector({
@@ -19,7 +20,7 @@ export default [
       format: "cjs",
       sourcemap: true,
     },
-    plugins: [version, typescript(), commonjs(), terser({ format: { comments: false } })],
+    plugins: [version, typescript(), nodeResolve(), commonjs(), terser({ format: { comments: false } })],
   },
   {
     input: "src/tsz.ts",
@@ -28,7 +29,7 @@ export default [
       format: "cjs",
       sourcemap: true,
     },
-    plugins: [version, typescript(), commonjs(), terser({ format: { comments: false } })],
+    plugins: [version, typescript(), nodeResolve(), commonjs(), terser({ format: { comments: false } })],
   },
   {
     input: "src/trzsz.ts",
@@ -46,6 +47,6 @@ export default [
         sourcemap: true,
       },
     ],
-    plugins: [version, typescript(), commonjs(), terser({ format: { comments: false } })],
+    plugins: [version, typescript(), nodeResolve(), commonjs(), terser({ format: { comments: false } })],
   },
 ];

@@ -1,3 +1,9 @@
+/**
+ * trzsz: https://github.com/trzsz/trzsz.js
+ * Copyright(c) 2022 Lonny Wong <lonnywong@qq.com>
+ * @license MIT
+ */
+
 global.Blob = class MockBlob extends Blob {
   /**
    * https://github.com/jsdom/jsdom/issues/2555

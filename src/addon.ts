@@ -13,21 +13,21 @@ import { Terminal, IDisposable, ITerminalAddon } from "xterm";
 export class TrzszAddon implements ITerminalAddon {
   private socket: WebSocket;
   private disposables: IDisposable[] = [];
-  private chooseSendFiles?: () => Promise<string[]>;
-  private chooseSaveDirectory?: () => Promise<string>;
+  private chooseSendFiles?: () => Promise<string[] | undefined>;
+  private chooseSaveDirectory?: () => Promise<string | undefined>;
 
   /**
    * Create a TrzszAddon
    * @param {WebSocket} socket - The websocket connection.
-   * @param {Promise<string[]>} chooseSendFiles - Choose some files to be sent to the server.
-   *                                              No need for webshell or which running in a browser.
-   * @param {Promise<string>} chooseSaveDirectory - Choose a directory to save the received files.
-   *                                                No need for webshell or which running in a browser.
+   * @param {Promise<string[] | undefined>} chooseSendFiles - Choose some files to be sent to the server.
+   *                                                          No need for webshell or which running in a browser.
+   * @param {Promise<string | undefined>} chooseSaveDirectory - Choose a directory to save the received files.
+   *                                                            No need for webshell or which running in a browser.
    */
   constructor(
     socket: WebSocket,
-    chooseSendFiles?: () => Promise<string[]>,
-    chooseSaveDirectory?: () => Promise<string>
+    chooseSendFiles?: () => Promise<string[] | undefined>,
+    chooseSaveDirectory?: () => Promise<string | undefined>
   ) {
     this.socket = socket;
     this.chooseSendFiles = chooseSendFiles;

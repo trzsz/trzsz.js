@@ -4,8 +4,11 @@
  * @license MIT
  */
 
-import * as utils from "./utils";
+import * as nodefs from "./nodefs";
 import * as browser from "./browser";
+import { TrzszTransfer } from "./transfer";
+import { TextProgressBar } from "./progress";
+import { strToUint8, uint8ToStr } from "./comm";
 
 /**
  * Trzsz callback functions
@@ -29,7 +32,7 @@ export interface TrzszCallback {
    * @return {string[]} The file paths array to be sent.
    *                    Empty array or undefined means the user has canceled.
    */
-  chooseSendFiles?: () => Promise<string[]>;
+  chooseSendFiles?: () => Promise<string[] | undefined>;
 
   /**
    * Choose a directory to save the received files.
@@ -37,24 +40,42 @@ export interface TrzszCallback {
    * @return {string} The directory to save the received files.
    *                  Empty string or undefined means the user has canceled.
    */
-  chooseSaveDirectory?: () => Promise<string>;
+  chooseSaveDirectory?: () => Promise<string | undefined>;
 }
 
 /**
- * Trzsz magic key regular expression
+ * trzsz magic key
  */
+const trzszMagicKeyPrefix = "::TRZSZ:TRANSFER:";
 const trzszMagicKeyRegExp = new RegExp(/::TRZSZ:TRANSFER:([SR]):(\d+\.\d+\.\d+)(:\d+)?/);
+const trzszMagicUint64 = new BigUint64Array(strToUint8(trzszMagicKeyPrefix).buffer, 0, 2);
 
 /**
- * Trzsz current status
+ * Find the trzsz magic key from output buffer.
+ * @param {string | ArrayBuffer | Blob} output - The output buffer.
  */
-enum TrzszStatus {
-  /** no files transferring */
-  STANDBY = 0,
-  /** sending files */
-  SENDING = 1,
-  /** receiving files */
-  RECVING = 2,
+export async function findTrzszMagicKey(output: string | ArrayBuffer | Blob) {
+  if (typeof output === "string") {
+    const idx = output.indexOf(trzszMagicKeyPrefix);
+    return idx < 0 ? null : output.substring(idx);
+  }
+  let uint8: Uint8Array;
+  if (output instanceof ArrayBuffer) {
+    uint8 = new Uint8Array(output);
+  } else if (output instanceof Blob) {
+    uint8 = new Uint8Array(await output.arrayBuffer());
+  } else {
+    return null;
+  }
+  const idx = uint8.indexOf(0x3a); // the index of first `:`
+  if (idx < 0 || uint8.length - idx < 16) {
+    return null;
+  }
+  const uint64 = new BigUint64Array(uint8.buffer.slice(idx, idx + 16));
+  if (uint64[0] != trzszMagicUint64[0] || uint64[1] != trzszMagicUint64[1]) {
+    return null;
+  }
+  return uint8ToStr(uint8.subarray(idx));
 }
 
 /**
@@ -63,10 +84,11 @@ enum TrzszStatus {
 export class TrzszFilter {
   private writeToTerminal: (output: string | ArrayBuffer | Blob) => void;
   private sendToServer: (input: string | Uint8Array) => void;
-  private chooseSendFiles?: () => Promise<string[]>;
-  private chooseSaveDirectory?: () => Promise<string>;
+  private chooseSendFiles?: () => Promise<string[] | undefined>;
+  private chooseSaveDirectory?: () => Promise<string | undefined>;
   private terminalColumns: number = 80;
-  private currentStatus: TrzszStatus = TrzszStatus.STANDBY;
+  private trzszTransfer: TrzszTransfer | null = null;
+  private textProgressBar: TextProgressBar | null = null;
 
   /**
    * Create a trzsz filter to upload and download files.
@@ -87,10 +109,10 @@ export class TrzszFilter {
    */
   public processServerOutput(output: string | ArrayBuffer | Blob): void {
     if (this.isTransferringFiles()) {
-      // TODO do transferring files
+      this.trzszTransfer.addReceivedData(output);
       return;
     }
-    this.detectTrzszMagicKey(output);
+    this.detectAndHandleTrzsz(output);
     this.writeToTerminal(output);
   }
 
@@ -117,7 +139,7 @@ export class TrzszFilter {
     if (this.isTransferringFiles()) {
       return; // ignore input while transferring files
     }
-    this.sendToServer(Uint8Array.from(input, (v) => v.charCodeAt(0)));
+    this.sendToServer(strToUint8(input));
   }
 
   /**
@@ -126,13 +148,16 @@ export class TrzszFilter {
    */
   public setTerminalColumns(columns: number): void {
     this.terminalColumns = columns;
+    if (this.textProgressBar != null) {
+      this.textProgressBar.setTerminalColumns(columns);
+    }
   }
 
   /**
    * @return {boolean} Is transferring files or not.
    */
   public isTransferringFiles(): boolean {
-    return this.currentStatus === TrzszStatus.SENDING || this.currentStatus === TrzszStatus.RECVING;
+    return this.trzszTransfer != null;
   }
 
   /**
@@ -142,90 +167,106 @@ export class TrzszFilter {
     if (!this.isTransferringFiles()) {
       return;
     }
-    this.exitWithMessage("Stopped");
+    this.trzszTransfer.stopTransferring();
   }
 
   // disable jsdoc for private method
   /* eslint-disable require-jsdoc */
 
-  private exitWithMessage(msg: string): void {
-    utils.sendExit(msg, this.sendToServer).finally(() => (this.currentStatus = TrzszStatus.STANDBY));
-  }
-
-  private isRunningInBrowser(): boolean {
-    return typeof require === "undefined";
-  }
-
-  private async detectTrzszMagicKey(output: string | ArrayBuffer | Blob) {
-    const buffer = await utils.findTrzszMagicKey(output);
+  private async detectAndHandleTrzsz(output: string | ArrayBuffer | Blob) {
+    const buffer = await findTrzszMagicKey(output);
     if (!buffer) {
       return;
     }
+
     const found = buffer.match(trzszMagicKeyRegExp);
-    if (found) {
-      if (found[1] === "S") {
-        this.handleTrzszDownloadFiles(found[2]);
-      } else if (found[1] === "R") {
-        this.handleTrzszUploadFiles(found[2]);
-      }
+    if (!found) {
+      return;
     }
+
+    try {
+      this.trzszTransfer = new TrzszTransfer(this.sendToServer);
+      if (found[1] === "S") {
+        await this.handleTrzszDownloadFiles(found[2]);
+      } else if (found[1] === "R") {
+        await this.handleTrzszUploadFiles(found[2]);
+      }
+    } catch (err) {
+      await this.trzszTransfer.handleClientError(err);
+    } finally {
+      this.trzszTransfer.cleanup();
+      this.textProgressBar = null;
+      this.trzszTransfer = null;
+    }
+  }
+
+  private isRunningInBrowser(): boolean {
+    if (typeof require === "undefined") {
+      return true;
+    }
+
+    try {
+      require("fs");
+    } catch (err) {
+      return true;
+    }
+
+    return false;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private async handleTrzszDownloadFiles(version: string) {
+    let savePath;
+    let openSaveFile;
     if (this.isRunningInBrowser()) {
-      let saveHandle;
-      try {
-        saveHandle = await browser.selectSaveFile("test.txt");
-      } catch (err) {
-        if (err.name === "AbortError") {
-          this.cancelTransferringFiles();
-          return;
-        }
-        this.exitWithMessage(err.toString());
-        return;
-      }
-      console.log(`save file: ${saveHandle}`);
-      this.currentStatus = TrzszStatus.RECVING;
+      openSaveFile = browser.openSaveFile;
     } else {
-      const savePath = await this.chooseSaveDirectory();
+      savePath = await this.chooseSaveDirectory();
       if (!savePath) {
-        this.cancelTransferringFiles();
+        await this.trzszTransfer.sendAction(false);
         return;
       }
-      console.log(`save to: ${savePath}`);
-      this.currentStatus = TrzszStatus.RECVING;
+      nodefs.checkPathWritable(savePath);
+      openSaveFile = nodefs.openSaveFile;
     }
+
+    await this.trzszTransfer.sendAction(true);
+    const config = await this.trzszTransfer.recvConfig();
+
+    if (config.quiet !== true) {
+      this.textProgressBar = new TextProgressBar(this.writeToTerminal, this.terminalColumns);
+    }
+
+    const localPaths = await this.trzszTransfer.recvFiles(savePath, config, openSaveFile, this.textProgressBar);
+
+    this.trzszTransfer.sendExit(`Saved ${localPaths.join(", ")}${savePath ? " to " + savePath : ""}`);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private async handleTrzszUploadFiles(version: string) {
+    let sendFiles;
     if (this.isRunningInBrowser()) {
-      let sendFiles;
-      try {
-        sendFiles = await browser.selectSendFiles();
-      } catch (err) {
-        if (err.name === "AbortError") {
-          this.cancelTransferringFiles();
-          return;
-        }
-        this.exitWithMessage(err.toString());
-        return;
-      }
-      console.log(`send files: ${sendFiles}`);
-      this.currentStatus = TrzszStatus.SENDING;
+      sendFiles = await browser.selectSendFiles();
     } else {
       const filePaths = await this.chooseSendFiles();
-      if (!filePaths || !filePaths.length) {
-        this.cancelTransferringFiles();
-        return;
-      }
-      console.log(`send files: ${filePaths}`);
-      this.currentStatus = TrzszStatus.SENDING;
+      nodefs.checkFilesReadable(filePaths);
+      sendFiles = await nodefs.openSendFiles(filePaths);
     }
-  }
 
-  private async cancelTransferringFiles() {
-    await utils.sendAction(false, this.sendToServer);
+    if (!sendFiles || !sendFiles.length) {
+      await this.trzszTransfer.sendAction(false);
+      return;
+    }
+
+    await this.trzszTransfer.sendAction(true);
+    const config = await this.trzszTransfer.recvConfig();
+
+    if (config.quiet !== true) {
+      this.textProgressBar = new TextProgressBar(this.writeToTerminal, this.terminalColumns);
+    }
+
+    const remotePaths = await this.trzszTransfer.sendFiles(sendFiles, config, this.textProgressBar);
+
+    this.trzszTransfer.sendExit(`Received ${remotePaths.join(", ")}`);
   }
 }

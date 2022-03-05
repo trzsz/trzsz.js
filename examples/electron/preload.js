@@ -30,7 +30,7 @@ window.newTrzsz = function (writeToTerminal, sendToServer, terminalColumns) {
       },
       // choose a directory to save the received files
       chooseSaveDirectory: async () => {
-        return ipcRenderer.invoke("show-open-dialog-sync", {
+        const savePaths = await ipcRenderer.invoke("show-open-dialog-sync", {
           title: "Choose a folder to save file(s)",
           message: "Choose a folder to save file(s)",
           properties: [
@@ -42,6 +42,10 @@ window.newTrzsz = function (writeToTerminal, sendToServer, terminalColumns) {
             "dontAddToRecent",
           ],
         });
+        if (!savePaths || !savePaths.length) {
+          return undefined;
+        }
+        return savePaths[0];
       },
     },
     // the terminal columns

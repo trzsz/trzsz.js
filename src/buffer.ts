@@ -6,9 +6,12 @@
 
 /* eslint-disable require-jsdoc */
 
+import { strToUint8, uint8ToStr, TrzszError } from "./comm";
+
 export class TrzszBuffer {
   private bufArray: (string | ArrayBuffer | Blob | null)[] = [];
   private resolve: Function | null = null;
+  private reject: Function | null = null;
   private bufHead: number = 0;
   private bufTail: number = 0;
   private nextIdx: number = 0;
@@ -18,21 +21,30 @@ export class TrzszBuffer {
   public addBuffer(buf: string | ArrayBuffer | Blob) {
     this.bufArray[this.bufTail++] = buf;
     if (this.resolve) {
-      this.resolve(1);
+      this.resolve();
+      this.resolve = null;
+      this.reject = null;
+    }
+  }
+
+  public stopBuffer() {
+    if (this.reject) {
+      this.reject(new TrzszError("Stopped"));
+      this.reject = null;
       this.resolve = null;
     }
   }
 
   private async toUint8Array(buf: string | ArrayBuffer | Blob) {
     if (typeof buf === "string") {
-      return Uint8Array.from(buf, (v) => v.charCodeAt(0));
+      return strToUint8(buf);
     } else if (buf instanceof ArrayBuffer) {
       return new Uint8Array(buf);
     } else if (buf instanceof Blob) {
       const buffer = await buf.arrayBuffer();
       return new Uint8Array(buffer);
     } else {
-      return Promise.reject(new Error("The buffer type is not supported"));
+      throw new TrzszError("The buffer type is not supported", null, true);
     }
   }
 
@@ -45,8 +57,9 @@ export class TrzszBuffer {
         this.bufHead = 0;
         this.bufTail = 0;
       }
-      await new Promise(resolve => {
+      await new Promise((resolve, reject) => {
         this.resolve = resolve;
+        this.reject = reject;
       });
     }
     const buf = this.bufArray[this.bufHead];
@@ -74,20 +87,21 @@ export class TrzszBuffer {
     let len = 0;
     while (true) {
       let next = await this.nextBuffer();
-      const newLineIdx = next.indexOf(0x0A);
+      const newLineIdx = next.indexOf(0x0a);
       if (newLineIdx >= 0) {
         this.nextIdx += newLineIdx + 1; // +1 to ignroe the '\n'
         next = next.subarray(0, newLineIdx);
       } else {
         this.nextIdx += next.length;
       }
-      if (next.includes(0x03)) { // `ctrl + c` to interrupt
-        return Promise.reject(new Error("Interrupted"));
+      if (next.includes(0x03)) {
+        // `ctrl + c` to interrupt
+        throw new TrzszError("Interrupted");
       }
       buf = this.appendBuffer(buf, len, next);
       len += next.length;
       if (newLineIdx >= 0) {
-        return buf.subarray(0, len);
+        return uint8ToStr(buf.subarray(0, len));
       }
     }
   }
