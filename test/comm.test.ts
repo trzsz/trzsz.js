@@ -4,8 +4,7 @@
  * @license MIT
  */
 
-import { strToUint8 } from "../src/comm";
-import { encodeBuffer, decodeBuffer } from "../src/transfer";
+import { strToUint8, encodeBuffer, decodeBuffer } from "../src/comm";
 
 test("zlib and base64 encode buffer", () => {
   expect(encodeBuffer("abc")).toBe("eJxLTEoGAAJNASc=");

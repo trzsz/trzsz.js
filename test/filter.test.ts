@@ -4,7 +4,7 @@
  * @license MIT
  */
 
-import { strToArrBuf, uint8ToStr } from "../src/comm";
+import { strToArrBuf } from "../src/comm";
 import { findTrzszMagicKey, TrzszCallback, TrzszFilter } from "../src/filter";
 
 test("find trzsz magic key from string", async () => {
@@ -32,7 +32,7 @@ test("find trzsz magic key from blob", async () => {
   expect(await findTrzszMagicKey(new Blob(["abc::TRZSZ:TRANSFER:1"]))).toBe("::TRZSZ:TRANSFER:1");
 });
 
-test("process the terminal binary input", () => {
+test("process the terminal binary input", async () => {
   const mockCallback: TrzszCallback = {
     writeToTerminal: jest.fn(),
     sendToServer: jest.fn(),
@@ -42,7 +42,7 @@ test("process the terminal binary input", () => {
   for (let i = 0; i < 0x100; i++) {
     uint8[i] = i;
   }
-  tf.processBinaryInput(uint8ToStr(uint8));
+  tf.processBinaryInput(String.fromCharCode.apply(null, uint8));
   expect((mockCallback.sendToServer as jest.Mock).mock.calls.length).toBe(1);
   expect((mockCallback.writeToTerminal as jest.Mock).mock.calls.length).toBe(0);
   expect((mockCallback.sendToServer as jest.Mock).mock.calls[0][0]).toStrictEqual(uint8);

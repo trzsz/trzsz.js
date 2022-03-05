@@ -21,5 +21,9 @@ export class TextProgressBar implements ProgressCallback {
     this.columns = columns;
   }
 
-  // TODO
+  public onNum(num: number) {}
+  public onName(name: string) {}
+  public onSize(size: number) {}
+  public onStep(step: number) {}
+  public onDone(name: string) {}
 }

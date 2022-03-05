@@ -109,7 +109,7 @@ test("showSaveFilePicker and write", async () => {
   expect(tfr.getName()).toBe("test.txt");
 
   const buf = strToUint8("test file content");
-  tfr.writeFile(buf);
+  await tfr.writeFile(buf);
   expect(mockFileStream.write.mock.calls.length).toBe(1);
   expect(mockFileStream.write.mock.calls[0][0]).toBe(buf);
 

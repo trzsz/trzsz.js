@@ -124,8 +124,8 @@ test("open save file", async () => {
 
   tfr = await openSaveFile(tmpDir, "save.txt", true);
   expect(tfr.getName()).toBe("save.txt");
-  tfr.writeFile(strToUint8("test "));
-  tfr.writeFile(strToUint8("file content"));
+  await tfr.writeFile(strToUint8("test "));
+  await tfr.writeFile(strToUint8("file content"));
   tfr.closeFile();
   expect(fs.readFileSync(path.join(tmpDir, "save.txt")).toString()).toBe("test file content");
 

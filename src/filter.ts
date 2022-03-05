@@ -112,7 +112,7 @@ export class TrzszFilter {
       this.trzszTransfer.addReceivedData(output);
       return;
     }
-    this.detectAndHandleTrzsz(output);
+    void this.detectAndHandleTrzsz(output);
     this.writeToTerminal(output);
   }
 
@@ -167,7 +167,7 @@ export class TrzszFilter {
     if (!this.isTransferringFiles()) {
       return;
     }
-    this.trzszTransfer.stopTransferring();
+    void this.trzszTransfer.stopTransferring();
   }
 
   // disable jsdoc for private method
@@ -237,9 +237,9 @@ export class TrzszFilter {
       this.textProgressBar = new TextProgressBar(this.writeToTerminal, this.terminalColumns);
     }
 
-    const localPaths = await this.trzszTransfer.recvFiles(savePath, config, openSaveFile, this.textProgressBar);
+    const localNames = await this.trzszTransfer.recvFiles(savePath, openSaveFile, this.textProgressBar);
 
-    this.trzszTransfer.sendExit(`Saved ${localPaths.join(", ")}${savePath ? " to " + savePath : ""}`);
+    await this.trzszTransfer.sendExit(`Saved ${localNames.join(", ")}${savePath ? " to " + savePath : ""}`);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -265,8 +265,8 @@ export class TrzszFilter {
       this.textProgressBar = new TextProgressBar(this.writeToTerminal, this.terminalColumns);
     }
 
-    const remotePaths = await this.trzszTransfer.sendFiles(sendFiles, config, this.textProgressBar);
+    const remoteNames = await this.trzszTransfer.sendFiles(sendFiles, this.textProgressBar);
 
-    this.trzszTransfer.sendExit(`Received ${remotePaths.join(", ")}`);
+    await this.trzszTransfer.sendExit(`Received ${remoteNames.join(", ")}`);
   }
 }
