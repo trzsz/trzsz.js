@@ -368,7 +368,7 @@ export class TrzszTransfer {
     return remoteNames;
   }
 
-  public async recvFiles(savePath: string, openSaveFile: OpenSaveFile, progressCallback: ProgressCallback) {
+  public async recvFiles(saveParam: any, openSaveFile: OpenSaveFile, progressCallback: ProgressCallback) {
     const num = await this.recvInteger("NUM");
     await this.sendInteger("SUCC", num);
     if (progressCallback) {
@@ -383,7 +383,7 @@ export class TrzszTransfer {
 
     for (let i = 0; i < num; i++) {
       const fileName = await this.recvString("NAME");
-      const file = await openSaveFile(savePath, fileName, overwrite);
+      const file = await openSaveFile(saveParam, fileName, overwrite);
       this.openedFiles.push(file);
       const localName = file.getName();
       await this.sendString("SUCC", localName);

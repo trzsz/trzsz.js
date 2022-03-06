@@ -41,6 +41,14 @@ export interface TrzszCallback {
    *                  Empty string or undefined means the user has canceled.
    */
   chooseSaveDirectory?: () => Promise<string | undefined>;
+
+  /**
+   * A user event may be required to open the save dialog in browsers.
+   * No need for nodejs environment ( e.g.: electron preload.js )
+   * @param {string} fileName - The file name going to download.
+   * @return {boolean} open the save dialog or cancel the download.
+   */
+  requireUserPermission?: (fileName: string) => Promise<boolean>;
 }
 
 /**
@@ -86,6 +94,7 @@ export class TrzszFilter {
   private sendToServer: (input: string | Uint8Array) => void;
   private chooseSendFiles?: () => Promise<string[] | undefined>;
   private chooseSaveDirectory?: () => Promise<string | undefined>;
+  private requireUserPermission?: (fileName: string) => Promise<boolean>;
   private terminalColumns: number = 80;
   private trzszTransfer: TrzszTransfer | null = null;
   private textProgressBar: TextProgressBar | null = null;
@@ -100,6 +109,7 @@ export class TrzszFilter {
     this.sendToServer = trzszCallback.sendToServer;
     this.chooseSendFiles = trzszCallback.chooseSendFiles;
     this.chooseSaveDirectory = trzszCallback.chooseSaveDirectory;
+    this.requireUserPermission = trzszCallback.requireUserPermission;
     this.terminalColumns = terminalColumns;
   }
 
@@ -217,9 +227,11 @@ export class TrzszFilter {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private async handleTrzszDownloadFiles(version: string) {
     let savePath;
+    let saveParam;
     let openSaveFile;
     if (this.isRunningInBrowser()) {
       openSaveFile = browser.openSaveFile;
+      saveParam = this.requireUserPermission ? this.requireUserPermission : browser.defaultRequireUserPermission;
     } else {
       savePath = await this.chooseSaveDirectory();
       if (!savePath) {
@@ -228,6 +240,7 @@ export class TrzszFilter {
       }
       nodefs.checkPathWritable(savePath);
       openSaveFile = nodefs.openSaveFile;
+      saveParam = savePath;
     }
 
     await this.trzszTransfer.sendAction(true);
@@ -237,7 +250,7 @@ export class TrzszFilter {
       this.textProgressBar = new TextProgressBar(this.writeToTerminal, this.terminalColumns);
     }
 
-    const localNames = await this.trzszTransfer.recvFiles(savePath, openSaveFile, this.textProgressBar);
+    const localNames = await this.trzszTransfer.recvFiles(saveParam, openSaveFile, this.textProgressBar);
 
     await this.trzszTransfer.sendExit(`Saved ${localNames.join(", ")}${savePath ? " to " + savePath : ""}`);
   }

@@ -99,7 +99,7 @@ export interface TrzszFileWriter extends TrzszFile {
   writeFile: (buf: Uint8Array) => Promise<void>;
 }
 
-export type OpenSaveFile = (savePath: string, fileName: string, overwrite: boolean) => Promise<TrzszFileWriter>;
+export type OpenSaveFile = (saveParam: any, fileName: string, overwrite: boolean) => Promise<TrzszFileWriter>;
 
 export interface ProgressCallback {
   onNum: (num: number) => void;

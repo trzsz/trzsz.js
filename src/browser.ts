@@ -97,21 +97,49 @@ class BrowserFileWriter implements TrzszFileWriter {
   }
 }
 
+async function doShowSaveFilePicker(fileName: string) {
+  try {
+    // @ts-ignore
+    return await window.showSaveFilePicker({ suggestedName: fileName });
+  } catch (err) {
+    if (err.name === "AbortError") {
+      throw new TrzszError("Cancelled");
+    }
+    throw err;
+  }
+}
+
+function isNeedUserPermission(err: Error) {
+  return err.name === "DOMException" || err.message.includes("user gesture");
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function openSaveFile(savePath: string, fileName: string, overwrite: boolean) {
+export async function openSaveFile(requireUserPermission: Function, fileName: string, overwrite: boolean) {
   if (!window.hasOwnProperty("showSaveFilePicker")) {
     throw new TrzszError("The browser doesn't support the File System Access API");
   }
 
   let fileHandle;
   try {
-    // @ts-ignore
-    fileHandle = await window.showSaveFilePicker({ suggestedName: fileName });
+    fileHandle = await doShowSaveFilePicker(fileName);
   } catch (err) {
-    if (err.name === "AbortError") {
+    if (!isNeedUserPermission(err)) {
+      throw err;
+    }
+
+    const authorized = await requireUserPermission(fileName);
+    if (!authorized) {
       throw new TrzszError("Cancelled");
     }
-    throw err;
+
+    try {
+      fileHandle = await doShowSaveFilePicker(fileName);
+    } catch (e) {
+      if (isNeedUserPermission(e)) {
+        throw new TrzszError("No permission to call the File System Access API");
+      }
+      throw e;
+    }
   }
 
   if (!fileHandle) {
@@ -121,4 +149,29 @@ export async function openSaveFile(savePath: string, fileName: string, overwrite
   const file = await fileHandle.getFile();
   const writer = await fileHandle.createWritable();
   return new BrowserFileWriter(file.name, writer);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function defaultRequireUserPermission(fileName: string): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    const div = document.createElement("div");
+    div.style.cssText = "position: fixed; left: 0; top: 0; width: 100%; height: 50px; line-height: 50px;";
+    div.style.cssText += "text-align: center; background: #28a745; color: #fff;";
+    div.innerHTML += "Click anywhere or press the space key to download ";
+    const code = document.createElement("code");
+    code.style.cssText = "padding: 5px 10px; border-radius: 5px; background: #f9f2f4; color: #c7254e;";
+    code.innerHTML += fileName;
+    div.appendChild(code);
+    document.body.appendChild(div);
+
+    function grantedPermission() {
+      div.remove();
+      document.removeEventListener("click", grantedPermission);
+      document.removeEventListener("keypress", grantedPermission);
+      resolve(true);
+    }
+
+    document.addEventListener("click", grantedPermission, { once: true });
+    document.addEventListener("keypress", grantedPermission, { once: true });
+  });
 }
