@@ -4,6 +4,7 @@
  * @license MIT
  */
 
+import { TrzszOptions } from "./options";
 import { TrzszFilter } from "./filter";
 import { Terminal, IDisposable, ITerminalAddon } from "xterm";
 
@@ -13,25 +14,16 @@ import { Terminal, IDisposable, ITerminalAddon } from "xterm";
 export class TrzszAddon implements ITerminalAddon {
   private socket: WebSocket;
   private disposables: IDisposable[] = [];
-  private chooseSendFiles?: () => Promise<string[] | undefined>;
-  private chooseSaveDirectory?: () => Promise<string | undefined>;
+  private options: TrzszOptions;
 
   /**
    * Create a TrzszAddon
    * @param {WebSocket} socket - The websocket connection.
-   * @param {Promise<string[] | undefined>} chooseSendFiles - Choose some files to be sent to the server.
-   *                                                          No need for webshell or which running in a browser.
-   * @param {Promise<string | undefined>} chooseSaveDirectory - Choose a directory to save the received files.
-   *                                                            No need for webshell or which running in a browser.
+   * @param {TrzszOptions} options - The trzsz options.
    */
-  constructor(
-    socket: WebSocket,
-    chooseSendFiles?: () => Promise<string[] | undefined>,
-    chooseSaveDirectory?: () => Promise<string | undefined>
-  ) {
+  constructor(socket: WebSocket, options?: TrzszOptions) {
     this.socket = socket;
-    this.chooseSendFiles = chooseSendFiles;
-    this.chooseSaveDirectory = chooseSaveDirectory;
+    this.options = options ? options : {};
     // always set binary type to arraybuffer
     this.socket.binaryType = "arraybuffer";
   }
@@ -50,15 +42,14 @@ export class TrzszAddon implements ITerminalAddon {
       }
       this.socket.send(data);
     };
-    const trzsz = new TrzszFilter(
-      {
-        writeToTerminal: writeToTerminal,
-        sendToServer: sendToServer,
-        chooseSendFiles: this.chooseSendFiles,
-        chooseSaveDirectory: this.chooseSaveDirectory,
-      },
-      terminal.cols
-    );
+    const trzsz = new TrzszFilter({
+      writeToTerminal: writeToTerminal,
+      sendToServer: sendToServer,
+      chooseSendFiles: this.options.chooseSendFiles,
+      chooseSaveDirectory: this.options.chooseSaveDirectory,
+      requireUserPermission: this.options.requireUserPermission,
+      terminalColumns: terminal.cols,
+    });
 
     this.disposables.push(this.addSocketListener(this.socket, "message", (ev) => trzsz.processServerOutput(ev.data)));
     this.disposables.push(terminal.onData((data) => trzsz.processTerminalInput(data)));

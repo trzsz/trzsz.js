@@ -15,6 +15,10 @@ let tmpFile: string;
 let linkPath: string;
 let notExistFile: string;
 
+beforeEach(() => {
+  jest.resetModules();
+});
+
 beforeAll(() => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "nodefs-test-"));
   tmpFile = path.join(tmpDir, "test.txt");
@@ -29,16 +33,13 @@ afterAll(() => {
 });
 
 test("require fs and path", () => {
-  jest.resetModules();
-  jest.mock("fs", () => {
+  jest.doMock("fs", () => {
     throw new Error("no require in browser");
   });
-  jest.mock("path", () => {
+  jest.doMock("path", () => {
     throw new Error("no require in browser");
   });
   require("../src/nodefs");
-  jest.unmock("fs");
-  jest.unmock("path");
 });
 
 test("check files readable", () => {

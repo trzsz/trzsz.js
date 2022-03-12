@@ -25,6 +25,7 @@
   "keywords": [
     "terminal",
     "webshell",
+    "xterm",
     "rz",
     "sz",
     "lrzsz",
@@ -58,6 +59,7 @@
     "rollup-plugin-version-injector": "^1.3.3",
     "ts-jest": "^27.1.3",
     "ts-md5": "^1.2.11",
+    "tslib": "^2.3.1",
     "typescript": "^4.5.5",
     "web-file-polyfill": "^1.0.4",
     "xterm": "^4.17.0"

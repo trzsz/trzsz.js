@@ -7,20 +7,19 @@
   "scripts": {
     "start": "electron .",
     "debug": "DEBUG=True electron .",
-    "rebuild": "electron-rebuild -f -t prod,optional,dev -w node-pty",
-    "postinstall": "npm run rebuild"
+    "release": "electron-builder -mwl",
+    "postinstall": "electron-builder install-app-deps"
   },
   "author": "Lonny Wong",
   "license": "MIT",
   "devDependencies": {
-    "@electron/remote": "^2.0.4",
     "electron": "^13.6.9",
-    "electron-rebuild": "^3.2.7",
-    "node-pty": "^0.10.1",
-    "xterm": "^4.17.0",
-    "xterm-addon-fit": "^0.5.0"
+    "electron-builder": "^22.14.13"
   },
   "dependencies": {
+    "node-pty": "^0.10.1",
+    "xterm": "^4.17.0",
+    "xterm-addon-fit": "^0.5.0",
     "trzsz": "file:../.."
   }
 }

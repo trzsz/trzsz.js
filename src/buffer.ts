@@ -9,7 +9,7 @@
 import { strToUint8, uint8ToStr, TrzszError } from "./comm";
 
 export class TrzszBuffer {
-  private bufArray: (string | ArrayBuffer | Blob | null)[] = [];
+  private bufArray: (string | ArrayBuffer | Uint8Array | Blob | null)[] = [];
   private resolve: Function | null = null;
   private reject: Function | null = null;
   private bufHead: number = 0;
@@ -18,7 +18,7 @@ export class TrzszBuffer {
   private nextBuf: Uint8Array | null = null;
   private arrBuf: ArrayBuffer = new ArrayBuffer(128);
 
-  public addBuffer(buf: string | ArrayBuffer | Blob) {
+  public addBuffer(buf: string | ArrayBuffer | Uint8Array | Blob) {
     this.bufArray[this.bufTail++] = buf;
     if (this.resolve) {
       this.resolve();
@@ -35,11 +35,13 @@ export class TrzszBuffer {
     }
   }
 
-  private async toUint8Array(buf: string | ArrayBuffer | Blob) {
+  private async toUint8Array(buf: string | ArrayBuffer | Uint8Array | Blob) {
     if (typeof buf === "string") {
       return strToUint8(buf);
     } else if (buf instanceof ArrayBuffer) {
       return new Uint8Array(buf);
+    } else if (buf instanceof Uint8Array) {
+      return buf;
     } else if (buf instanceof Blob) {
       const buffer = await buf.arrayBuffer();
       return new Uint8Array(buffer);

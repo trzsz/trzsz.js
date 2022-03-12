@@ -42,12 +42,10 @@ export class TrzszError extends Error {
       try {
         message = String.fromCharCode.apply(null, decodeBuffer(message));
       } catch (err) {
-        message = `decode [${message}] error: ${err.message}`;
+        message = `decode [${message}] error: ${err}`;
       }
-    } else {
-      if (type) {
-        message = `[TrzszError] ${type}: ${message}`;
-      }
+    } else if (type) {
+      message = `[TrzszError] ${type}: ${message}`;
     }
 
     super(message);
@@ -80,7 +78,10 @@ export class TrzszError extends Error {
     if (err instanceof TrzszError && !err.isTraceBack()) {
       return err.message;
     }
-    return err.stack.replace("TrzszError: ", "");
+    if (err.stack) {
+      return err.stack.replace("TrzszError: ", "");
+    }
+    return err.toString();
   }
 }
 

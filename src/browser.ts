@@ -29,10 +29,14 @@ class BrowserFileReader implements TrzszFileReader {
     if (this.pos >= this.file.size) {
       return new Uint8Array(0);
     }
-    const len = Math.min(buf.byteLength, this.file.size - this.pos);
-    const chunk = this.file.slice(this.pos, this.pos + len);
-    this.pos += len;
-    return new Uint8Array(await chunk.arrayBuffer());
+    try {
+      const len = Math.min(buf.byteLength, this.file.size - this.pos);
+      const chunk = this.file.slice(this.pos, this.pos + len);
+      this.pos += len;
+      return new Uint8Array(await chunk.arrayBuffer());
+    } catch (err) {
+      throw new TrzszError(err.toString());
+    }
   }
 
   public closeFile() {
@@ -103,14 +107,14 @@ async function doShowSaveFilePicker(fileName: string) {
     return await window.showSaveFilePicker({ suggestedName: fileName });
   } catch (err) {
     if (err.name === "AbortError") {
-      throw new TrzszError("Cancelled");
+      throw new TrzszError(err.toString());
     }
     throw err;
   }
 }
 
 function isNeedUserPermission(err: Error) {
-  return err.name === "DOMException" || err.message.includes("user gesture");
+  return err.name === "SecurityError";
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -140,10 +144,6 @@ export async function openSaveFile(requireUserPermission: Function, fileName: st
       }
       throw e;
     }
-  }
-
-  if (!fileHandle) {
-    throw new TrzszError("Cancelled");
   }
 
   const file = await fileHandle.getFile();

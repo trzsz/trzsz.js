@@ -7,6 +7,7 @@
 const os = require("os");
 const pty = require("node-pty");
 const express = require("express");
+const base64js = require("base64-js");
 
 const app = express();
 require("express-ws")(app);
@@ -21,6 +22,7 @@ app.ws("/ws/shell", function (ws, req) {
     name: "xterm-color",
     cols: Number(req.query.cols),
     rows: Number(req.query.rows),
+    encoding: null,
   });
 
   shell.on("data", (data) => ws.send(data));
@@ -29,6 +31,8 @@ app.ws("/ws/shell", function (ws, req) {
     data = JSON.parse(message);
     if (data.input) {
       shell.write(data.input);
+    } else if (data.binary) {
+      shell.write(base64js.toByteArray(data.binary));
     } else if (data.cols && data.rows) {
       console.log(`resize shell: cols=${data.cols}, rows=${data.rows}`);
       shell.resize(data.cols, data.rows);

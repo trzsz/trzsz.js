@@ -8,7 +8,7 @@
 
 import { File } from "web-file-polyfill";
 import { strToUint8 } from "../src/comm";
-import { selectSendFiles, openSaveFile } from "../src/browser";
+import { selectSendFiles, openSaveFile, defaultRequireUserPermission } from "../src/browser";
 
 const showOpenFilePicker = window.showOpenFilePicker;
 const showSaveFilePicker = window.showSaveFilePicker;
@@ -73,12 +73,26 @@ test("showOpenFilePicker and read", async () => {
   tfr.closeFile();
 });
 
-test("showSaveFilePicker return null", async () => {
-  window.showSaveFilePicker = jest.fn();
-  window.showSaveFilePicker.mockReturnValueOnce(undefined).mockReturnValueOnce(null);
-  await expect(openSaveFile("", "", false)).rejects.toThrowError("Cancelled");
-  await expect(openSaveFile("", "", false)).rejects.toThrowError("Cancelled");
-  expect(window.showSaveFilePicker.mock.calls.length).toBe(2);
+test("showOpenFilePicker and no permission", async () => {
+  const file = new File(["test file content"], "test.txt", { type: "text/plain" });
+  window.showOpenFilePicker = jest.fn();
+  window.showOpenFilePicker.mockReturnValueOnce([{ getFile: async () => file }]);
+
+  const tfr = (await selectSendFiles())[0];
+
+  expect(tfr.getName()).toBe("test.txt");
+  expect(tfr.getSize()).toBe(17);
+
+  const abMock = jest.fn().mockRejectedValueOnce(new Error("error"));
+  const fileMock = jest.spyOn(file, "slice").mockReturnValueOnce({
+    arrayBuffer: abMock,
+  });
+
+  const buf = new ArrayBuffer(17);
+  await expect(tfr.readFile(buf)).rejects.toThrowError("error");
+
+  fileMock.mockRestore();
+  tfr.closeFile();
 });
 
 test("showSaveFilePicker user cancel", async () => {
@@ -86,7 +100,7 @@ test("showSaveFilePicker user cancel", async () => {
   const abortError = new Error("user cancelled");
   abortError.name = "AbortError";
   window.showSaveFilePicker.mockRejectedValue(abortError);
-  await expect(openSaveFile("", "", false)).rejects.toThrowError("Cancelled");
+  await expect(openSaveFile("", "", false)).rejects.toThrowError("user cancelled");
   window.showSaveFilePicker.mockRejectedValue(new Error("other error"));
   await expect(openSaveFile("", "", false)).rejects.toThrowError("other error");
   expect(window.showSaveFilePicker.mock.calls.length).toBe(2);
@@ -115,4 +129,48 @@ test("showSaveFilePicker and write", async () => {
 
   tfr.closeFile();
   expect(mockFileStream.close.mock.calls.length).toBe(1);
+});
+
+test("showSaveFilePicker no user permission", async () => {
+  window.showSaveFilePicker = jest.fn();
+  const securityError = new Error("user gesture");
+  securityError.name = "SecurityError";
+  window.showSaveFilePicker.mockRejectedValueOnce(securityError);
+  setTimeout(() => document.body.click(), 200);
+  const mockRequireUserPermission = jest.fn();
+  mockRequireUserPermission.mockReturnValueOnce(false);
+  await expect(openSaveFile(mockRequireUserPermission, "test.txt", false)).rejects.toThrowError("Cancelled");
+  expect(window.showSaveFilePicker.mock.calls.length).toBe(1);
+  expect(mockRequireUserPermission.mock.calls.length).toBe(1);
+  expect(mockRequireUserPermission.mock.calls[0][0]).toBe("test.txt");
+});
+
+test("showSaveFilePicker require user permission", async () => {
+  window.showSaveFilePicker = jest.fn();
+  const securityError = new Error("user gesture");
+  securityError.name = "SecurityError";
+  const abortError = new Error("user cancelled");
+  abortError.name = "AbortError";
+  window.showSaveFilePicker.mockRejectedValueOnce(securityError).mockRejectedValueOnce(abortError);
+  setTimeout(() => document.body.click(), 200);
+  await expect(openSaveFile(defaultRequireUserPermission, "test.txt", false)).rejects.toThrowError("user cancelle");
+  expect(window.showSaveFilePicker.mock.calls.length).toBe(2);
+});
+
+test("showSaveFilePicker having user permission and fail", async () => {
+  window.showSaveFilePicker = jest.fn();
+  const securityError = new Error("user gesture");
+  securityError.name = "SecurityError";
+  window.showSaveFilePicker.mockRejectedValueOnce(securityError).mockRejectedValueOnce(securityError);
+  setTimeout(() => document.dispatchEvent(new KeyboardEvent("keypress", { keyCode: 0x20 })), 200);
+  await expect(openSaveFile(defaultRequireUserPermission, "test.txt", false)).rejects.toThrowError(
+    "No permission to call the File System Access API"
+  );
+
+  const otherError = new Error("other error");
+  window.showSaveFilePicker.mockRejectedValueOnce(securityError).mockRejectedValueOnce(otherError);
+  setTimeout(() => document.dispatchEvent(new KeyboardEvent("keypress", { keyCode: 0x20 })), 200);
+  await expect(openSaveFile(defaultRequireUserPermission, "test.txt", false)).rejects.toThrowError("other error");
+
+  expect(window.showSaveFilePicker.mock.calls.length).toBe(4);
 });

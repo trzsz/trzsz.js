@@ -17,18 +17,23 @@ InitBrowserExample = (terminal) => {
   fit.fit();
 
   const ws = new WebSocket(`ws://${location.host}/ws/shell?cols=${term.cols}&rows=${term.rows}`);
+  ws.binaryType = "arraybuffer";
 
   // initialize trzsz filter
-  const trzsz = new TrzszFilter(
-    {
-      // write the server output to the terminal
-      writeToTerminal: (output) => term.write(output),
-      // send the user input to the server
-      sendToServer: (data) => ws.send(JSON.stringify({ input: data })),
+  const trzsz = new TrzszFilter({
+    // write the server output to the terminal
+    writeToTerminal: (data) => term.write(typeof data === "string" ? data : new Uint8Array(data)),
+    // send the user input to the server
+    sendToServer: (data) => {
+      if (data instanceof Uint8Array) {
+        ws.send(JSON.stringify({ binary: base64js.fromByteArray(data) }));
+      } else {
+        ws.send(JSON.stringify({ input: data }));
+      }
     },
     // the terminal columns
-    term.cols
-  );
+    terminalColumns: term.cols,
+  });
 
   // let trzsz process the server output
   ws.addEventListener("message", (e) => trzsz.processServerOutput(e.data));

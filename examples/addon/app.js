@@ -22,7 +22,7 @@ app.post("/shell/create", (req, res) => {
   console.log(`create shell: id=${id}`);
 
   const cmd = os.platform() === "win32" ? "powershell.exe" : "bash";
-  shellArr[id] = pty.spawn(cmd, [], { name: "xterm-color" });
+  shellArr[id] = pty.spawn(cmd, [], { name: "xterm-color", encoding: null });
 
   res.json({ id: id });
 });

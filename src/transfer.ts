@@ -104,7 +104,7 @@ export class TrzszTransfer {
   private lastInputTime: number = 0;
   private openedFiles: TrzszFile[] = [];
   private tmuxOutputJunk: boolean = false;
-  private cleanTimeoutInMilliseconds: number = 50;
+  private cleanTimeoutInMilliseconds: number = 100;
   private transferConfig: any = {};
   private stopped: boolean = false;
 
@@ -118,12 +118,13 @@ export class TrzszTransfer {
     }
   }
 
-  public addReceivedData(data: string | ArrayBuffer | Blob) {
+  public addReceivedData(data: string | ArrayBuffer | Uint8Array | Blob) {
     this.buffer.addBuffer(data);
     this.lastInputTime = Date.now();
   }
 
   public async stopTransferring() {
+    this.cleanTimeoutInMilliseconds = 500;
     this.stopped = true;
     this.buffer.stopBuffer();
   }
@@ -150,8 +151,8 @@ export class TrzszTransfer {
     let line = await this.buffer.readLine();
 
     if (this.tmuxOutputJunk || mayHasJunk) {
-      if (line.length >= 2) {
-        while (line[line.length - 2] === "\r") {
+      if (line.length > 0) {
+        while (line[line.length - 1] === "\r") {
           line += await this.buffer.readLine();
         }
       }
@@ -414,7 +415,7 @@ export class TrzszTransfer {
       const actualDigest = new Uint8Array((md5.end(true) as Int32Array).buffer);
       const expectDigest = await this.recvBinary("MD5");
       if (actualDigest.length != expectDigest.length) {
-        throw new TrzszError(`Check MD5 of ${fileName} failed`);
+        throw new TrzszError(`Check MD5 of ${fileName} invalid`);
       }
       for (let j = 0; j < actualDigest.length; j++) {
         if (actualDigest[j] != expectDigest[j]) {

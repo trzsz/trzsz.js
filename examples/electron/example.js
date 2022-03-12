@@ -21,6 +21,7 @@ InitElectronExapmle = (terminal) => {
     name: "xterm-color",
     cols: term.cols,
     rows: term.rows,
+    encoding: null,
   });
 
   const trzsz = window.newTrzsz(

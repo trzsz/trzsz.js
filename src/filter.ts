@@ -6,50 +6,11 @@
 
 import * as nodefs from "./nodefs";
 import * as browser from "./browser";
+import { TrzszError } from "./comm";
+import { TrzszOptions } from "./options";
 import { TrzszTransfer } from "./transfer";
 import { TextProgressBar } from "./progress";
 import { strToUint8, uint8ToStr } from "./comm";
-
-/**
- * Trzsz callback functions
- */
-export interface TrzszCallback {
-  /**
-   * Write the server output to the terminal.
-   * @param {string} output - The server output.
-   */
-  writeToTerminal: (output: string | ArrayBuffer | Blob) => void;
-
-  /**
-   * Send the terminal input (aka: user input) to the server.
-   * @param {string} input - The terminal input (aka: user input).
-   */
-  sendToServer: (input: string | Uint8Array) => void;
-
-  /**
-   * Choose some files to be sent to the server.
-   * No need for webshell or which running in a browser.
-   * @return {string[]} The file paths array to be sent.
-   *                    Empty array or undefined means the user has canceled.
-   */
-  chooseSendFiles?: () => Promise<string[] | undefined>;
-
-  /**
-   * Choose a directory to save the received files.
-   * No need for webshell or which running in a browser.
-   * @return {string} The directory to save the received files.
-   *                  Empty string or undefined means the user has canceled.
-   */
-  chooseSaveDirectory?: () => Promise<string | undefined>;
-
-  /**
-   * A user event may be required to open the save dialog in browsers.
-   * No need for nodejs environment ( e.g.: electron preload.js )
-   * @param {string} fileName - The file name going to download.
-   * @return {boolean} open the save dialog or cancel the download.
-   */
-  requireUserPermission?: (fileName: string) => Promise<boolean>;
-}
 
 /**
  * trzsz magic key
@@ -60,9 +21,9 @@ const trzszMagicUint64 = new BigUint64Array(strToUint8(trzszMagicKeyPrefix).buff
 
 /**
  * Find the trzsz magic key from output buffer.
- * @param {string | ArrayBuffer | Blob} output - The output buffer.
+ * @param {string | ArrayBuffer | Uint8Array | Blob} output - The output buffer.
  */
-export async function findTrzszMagicKey(output: string | ArrayBuffer | Blob) {
+export async function findTrzszMagicKey(output: string | ArrayBuffer | Uint8Array | Blob) {
   if (typeof output === "string") {
     const idx = output.indexOf(trzszMagicKeyPrefix);
     return idx < 0 ? null : output.substring(idx);
@@ -70,6 +31,8 @@ export async function findTrzszMagicKey(output: string | ArrayBuffer | Blob) {
   let uint8: Uint8Array;
   if (output instanceof ArrayBuffer) {
     uint8 = new Uint8Array(output);
+  } else if (output instanceof Uint8Array) {
+    uint8 = output;
   } else if (output instanceof Blob) {
     uint8 = new Uint8Array(await output.arrayBuffer());
   } else {
@@ -90,34 +53,45 @@ export async function findTrzszMagicKey(output: string | ArrayBuffer | Blob) {
  * Trzsz filter the input and output to upload and download files.
  */
 export class TrzszFilter {
-  private writeToTerminal: (output: string | ArrayBuffer | Blob) => void;
+  private writeToTerminal: (output: string | ArrayBuffer | Uint8Array | Blob) => void;
   private sendToServer: (input: string | Uint8Array) => void;
   private chooseSendFiles?: () => Promise<string[] | undefined>;
   private chooseSaveDirectory?: () => Promise<string | undefined>;
   private requireUserPermission?: (fileName: string) => Promise<boolean>;
-  private terminalColumns: number = 80;
+  private terminalColumns: number;
   private trzszTransfer: TrzszTransfer | null = null;
   private textProgressBar: TextProgressBar | null = null;
 
   /**
    * Create a trzsz filter to upload and download files.
-   * @param {TrzszCallback} trzszCallback - Trzsz callback functions.
-   * @param {number} terminalColumns - The columns of terminal.
+   * @param {TrzszOptions} options - The trzsz options.
    */
-  public constructor(trzszCallback: TrzszCallback, terminalColumns: number) {
-    this.writeToTerminal = trzszCallback.writeToTerminal;
-    this.sendToServer = trzszCallback.sendToServer;
-    this.chooseSendFiles = trzszCallback.chooseSendFiles;
-    this.chooseSaveDirectory = trzszCallback.chooseSaveDirectory;
-    this.requireUserPermission = trzszCallback.requireUserPermission;
-    this.terminalColumns = terminalColumns;
+  public constructor(options: TrzszOptions) {
+    if (!options) {
+      throw new TrzszError("TrzszOptions is required");
+    }
+
+    if (!options.writeToTerminal) {
+      throw new TrzszError("TrzszOptions.writeToTerminal is required");
+    }
+    this.writeToTerminal = options.writeToTerminal;
+
+    if (!options.sendToServer) {
+      throw new TrzszError("TrzszOptions.sendToServer is required");
+    }
+    this.sendToServer = options.sendToServer;
+
+    this.chooseSendFiles = options.chooseSendFiles ? options.chooseSendFiles : undefined;
+    this.chooseSaveDirectory = options.chooseSaveDirectory ? options.chooseSaveDirectory : undefined;
+    this.requireUserPermission = options.requireUserPermission ? options.requireUserPermission : undefined;
+    this.terminalColumns = options.terminalColumns ? options.terminalColumns : 80;
   }
 
   /**
    * Process the server output.
    * @param {string} output - The server output.
    */
-  public processServerOutput(output: string | ArrayBuffer | Blob): void {
+  public processServerOutput(output: string | ArrayBuffer | Uint8Array | Blob): void {
     if (this.isTransferringFiles()) {
       this.trzszTransfer.addReceivedData(output);
       return;
@@ -183,7 +157,7 @@ export class TrzszFilter {
   // disable jsdoc for private method
   /* eslint-disable require-jsdoc */
 
-  private async detectAndHandleTrzsz(output: string | ArrayBuffer | Blob) {
+  private async detectAndHandleTrzsz(output: string | ArrayBuffer | Uint8Array | Blob) {
     const buffer = await findTrzszMagicKey(output);
     if (!buffer) {
       return;
@@ -211,17 +185,12 @@ export class TrzszFilter {
   }
 
   private isRunningInBrowser(): boolean {
-    if (typeof require === "undefined") {
-      return true;
-    }
-
     try {
       require("fs");
+      return false;
     } catch (err) {
       return true;
     }
-
-    return false;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

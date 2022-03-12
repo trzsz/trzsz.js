@@ -98,7 +98,7 @@ test("read binary from two buffer", async () => {
   for (let i = 0; i < uint8.length; i++) {
     uint8[i] = i & 0xff;
   }
-  tb.addBuffer(uint8.buffer.slice(0, 100));
+  tb.addBuffer(uint8.subarray(0, 100));
   setTimeout(() => tb.addBuffer(uint8.buffer.slice(100)), 100);
   expect(await tb.readBinary(200)).toStrictEqual(uint8);
   tb.addBuffer(uint8.buffer);
