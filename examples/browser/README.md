@@ -1,12 +1,21 @@
 # Browser example for trzsz
-*Under development ...*
 
-## Getting Started
+Simple webshell supports [trzsz](https://github.com/trzsz/trzsz). ( For security reasons, don't listen on public IP. )
+
+Recommend to use [TrzszAddon](../addon/).
+
+
+## Test Guidelines
 
 * Start test server
 ```sh
-cd /path/to/examples/browser
-cd ../.. && npm install && npm run build && cd -
+git clone https://github.com/trzsz/trzsz.js.git
+
+cd trzsz.js
+npm install
+npm run build
+
+cd examples/browser
 npm install
 npm start
 ```
@@ -18,7 +27,7 @@ http://localhost:8082
 
 * Install trzsz server
 ```sh
-sudo python -m pip install --upgrade trzsz-libs trzsz-svr
+sudo python -m pip install trzsz
 ```
 
 * Upload files

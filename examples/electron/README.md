@@ -1,19 +1,25 @@
 # Electron example for trzsz
-*Under development ...*
 
-## Getting Started
+Simple electron terminal supports [trzsz](https://github.com/trzsz/trzsz).
+
+## Test Guidelines
 
 * Start test app
 ```sh
-cd /path/to/examples/electron
-cd ../.. && npm install && npm run build && cd -
+git clone https://github.com/trzsz/trzsz.js.git
+
+cd trzsz.js
+npm install
+npm run build
+
+cd examples/electron
 npm install
 npm start
 ```
 
 * Install trzsz server
 ```sh
-sudo python -m pip install --upgrade trzsz-libs trzsz-svr
+sudo python -m pip install trzsz
 ```
 
 * Upload files

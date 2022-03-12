@@ -1,7 +1,8 @@
 # TrzszAddon example for trzsz
-*Under development ...*
 
-* If you are using [xterm-addon-attach](https://www.npmjs.com/package/xterm-addon-attach), just replace `AttachAddon` with `TrzszAddon`.
+Simple webshell supports [trzsz](https://github.com/trzsz/trzsz). ( For security reasons, don't listen on public IP. )
+
+If you are using [xterm-addon-attach](https://www.npmjs.com/package/xterm-addon-attach), just replace `AttachAddon` with `TrzszAddon`.
 
 ```js
 import { Terminal } from 'xterm';
@@ -22,16 +23,20 @@ terminal.loadAddon(trzszAddon);
 </script>
 ```
 
-* If you are building an electron app, it's recommended that you refer to [electron example](../electron/README.md).<br/>
-  Using `preload.js` to give `fs` permission to `trzsz`, for better user experience.
+If you are building an electron app, it's recommended that you refer to [electron example](../electron/README.md), which using `preload.js` to give `fs` permission to `trzsz.js`, for better user experience.
 
 
-## Getting Started
+## Test Guidelines
 
 * Start test server
 ```sh
-cd /path/to/examples/addon
-cd ../.. && npm install && npm run build && cd -
+git clone https://github.com/trzsz/trzsz.js.git
+
+cd trzsz.js
+npm install
+npm run build
+
+cd examples/addon
 npm install
 npm start
 ```
@@ -43,7 +48,7 @@ http://localhost:8081
 
 * Install trzsz server
 ```sh
-sudo python -m pip install --upgrade trzsz-libs trzsz-svr
+sudo python -m pip install trzsz
 ```
 
 * Upload files
