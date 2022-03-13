@@ -1,6 +1,6 @@
 # trzsz.js
 
-Make your webshell or terminal support [trzsz](https://trzsz.github.io/) ( trz / tsz ), which similar to ( rz / sz ) , and compatible with tmux.
+Making webshell and terminal supports [trzsz](https://trzsz.github.io/) ( trz / tsz ), which similar to ( rz / sz ) , and compatible with tmux.
 
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg?style=flat)](https://choosealicense.com/licenses/mit/)
 [![npmjs trzsz](https://img.shields.io/npm/v/trzsz.svg?style=flat)](https://www.npmjs.com/package/trzsz)
@@ -14,7 +14,7 @@ In this case, `lrzsz` ( rz / sz ) is convenient to use, but unfortunately it's n
 
 `tmux` is not going to support rz / sz ( [906](https://github.com/tmux/tmux/issues/906), [1439](https://github.com/tmux/tmux/issues/1439) ), and creating a new tools is much easier than patching `tmux`.
 
-`trzsz.js` is a `js` version of [trzsz](https://github.com/trzsz/trzsz), which supports webshell running in browser, terminal built with electron, etc.
+[trzsz.js](https://github.com/trzsz/trzsz.js) is a `js` version of [trzsz](https://github.com/trzsz/trzsz), which supports webshell running in browser, terminal built with electron, etc.
 
 
 ## Getting Started
