@@ -37,7 +37,11 @@ test("find trzsz magic key from string", async () => {
   expect(await findTrzszMagicKey(null)).toBe(null);
   expect(await findTrzszMagicKey("abc")).toBe(null);
   expect(await findTrzszMagicKey("abc::")).toBe(null);
+  expect(await findTrzszMagicKey("::TRZSZ:TRANSFER:1")).toBe("::TRZSZ:TRANSFER:1");
   expect(await findTrzszMagicKey("abc::TRZSZ:TRANSFER:1")).toBe("::TRZSZ:TRANSFER:1");
+  expect(await findTrzszMagicKey("a:bc::TRZSZ:TRANSFER:1")).toBe("::TRZSZ:TRANSFER:1");
+  expect(await findTrzszMagicKey("a:b:c::TRZSZ:TRANSFER:1")).toBe("::TRZSZ:TRANSFER:1");
+  expect(await findTrzszMagicKey("a:b:c:::::::TRZSZ:TRANSFER:1")).toBe("::TRZSZ:TRANSFER:1");
 });
 
 test("find trzsz magic key from Uint8Array", async () => {
@@ -45,8 +49,15 @@ test("find trzsz magic key from Uint8Array", async () => {
   expect(await findTrzszMagicKey(strToUint8("abc::"))).toBe(null);
   expect(await findTrzszMagicKey(strToUint8("abc::TRZSZ:TRANSFEX"))).toBe(null);
   expect(await findTrzszMagicKey(strToUint8("abc::XRZSZ:TRANSFER"))).toBe(null);
+  expect(await findTrzszMagicKey(strToUint8("::TRZSZ:TRANSFER"))).toBe("::TRZSZ:TRANSFER");
   expect(await findTrzszMagicKey(strToUint8("abc::TRZSZ:TRANSFER"))).toBe("::TRZSZ:TRANSFER");
   expect(await findTrzszMagicKey(strToUint8("abc::TRZSZ:TRANSFER:1"))).toBe("::TRZSZ:TRANSFER:1");
+  expect(await findTrzszMagicKey(strToUint8("a:bc::TRZSZ:TRANSFER:1"))).toBe("::TRZSZ:TRANSFER:1");
+  expect(await findTrzszMagicKey(strToUint8("a:b:c::TRZSZ:TRANSFER:1"))).toBe("::TRZSZ:TRANSFER:1");
+  expect(await findTrzszMagicKey(strToUint8("a:b:c:::::::TRZSZ:TRANSFER:1"))).toBe("::TRZSZ:TRANSFER:1");
+
+  const arrBuf = strToUint8("abc::TRZSZ:TRANSFER:1::ABC::TRZSZ:TRANSFEX").buffer;
+  expect(await findTrzszMagicKey(new Uint8Array(arrBuf, 23))).toBe(null);
 });
 
 test("find trzsz magic key from array buffer", async () => {
@@ -54,8 +65,12 @@ test("find trzsz magic key from array buffer", async () => {
   expect(await findTrzszMagicKey(strToArrBuf("abc::"))).toBe(null);
   expect(await findTrzszMagicKey(strToArrBuf("abc::TRZSZ:TRANSFEX"))).toBe(null);
   expect(await findTrzszMagicKey(strToArrBuf("abc::XRZSZ:TRANSFER"))).toBe(null);
+  expect(await findTrzszMagicKey(strToArrBuf("::TRZSZ:TRANSFER"))).toBe("::TRZSZ:TRANSFER");
   expect(await findTrzszMagicKey(strToArrBuf("abc::TRZSZ:TRANSFER"))).toBe("::TRZSZ:TRANSFER");
   expect(await findTrzszMagicKey(strToArrBuf("abc::TRZSZ:TRANSFER:1"))).toBe("::TRZSZ:TRANSFER:1");
+  expect(await findTrzszMagicKey(strToArrBuf("a:bc::TRZSZ:TRANSFER:1"))).toBe("::TRZSZ:TRANSFER:1");
+  expect(await findTrzszMagicKey(strToArrBuf("a:b:c::TRZSZ:TRANSFER:1"))).toBe("::TRZSZ:TRANSFER:1");
+  expect(await findTrzszMagicKey(strToArrBuf("a:b:c:::::::TRZSZ:TRANSFER:1"))).toBe("::TRZSZ:TRANSFER:1");
 });
 
 test("find trzsz magic key from blob", async () => {
@@ -63,8 +78,12 @@ test("find trzsz magic key from blob", async () => {
   expect(await findTrzszMagicKey(new Blob(["abc::"]))).toBe(null);
   expect(await findTrzszMagicKey(new Blob(["abc::TRZSZ:TRANSFEX"]))).toBe(null);
   expect(await findTrzszMagicKey(new Blob(["abc::XRZSZ:TRANSFER"]))).toBe(null);
+  expect(await findTrzszMagicKey(new Blob(["::TRZSZ:TRANSFER"]))).toBe("::TRZSZ:TRANSFER");
   expect(await findTrzszMagicKey(new Blob(["abc::TRZSZ:TRANSFER"]))).toBe("::TRZSZ:TRANSFER");
   expect(await findTrzszMagicKey(new Blob(["abc::TRZSZ:TRANSFER:1"]))).toBe("::TRZSZ:TRANSFER:1");
+  expect(await findTrzszMagicKey(new Blob(["a:bc::TRZSZ:TRANSFER:1"]))).toBe("::TRZSZ:TRANSFER:1");
+  expect(await findTrzszMagicKey(new Blob(["a:b:c::TRZSZ:TRANSFER:1"]))).toBe("::TRZSZ:TRANSFER:1");
+  expect(await findTrzszMagicKey(new Blob(["a:b:c:::::::TRZSZ:TRANSFER:1"]))).toBe("::TRZSZ:TRANSFER:1");
 });
 
 test("default trzsz options for filter", () => {

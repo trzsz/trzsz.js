@@ -38,15 +38,18 @@ export async function findTrzszMagicKey(output: string | ArrayBuffer | Uint8Arra
   } else {
     return null;
   }
-  const idx = uint8.indexOf(0x3a); // the index of first `:`
-  if (idx < 0 || uint8.length - idx < 16) {
-    return null;
+
+  let idx = -1;
+  while (true) {
+    idx = uint8.indexOf(0x3a, idx + 1); // the index of next `:`
+    if (idx < 0 || uint8.length - idx < 16) {
+      return null;
+    }
+    const uint64 = new BigUint64Array(uint8.buffer.slice(uint8.byteOffset + idx, uint8.byteOffset + idx + 16));
+    if (uint64[0] == trzszMagicUint64[0] && uint64[1] == trzszMagicUint64[1]) {
+      return uint8ToStr(uint8.subarray(idx));
+    }
   }
-  const uint64 = new BigUint64Array(uint8.buffer.slice(idx, idx + 16));
-  if (uint64[0] != trzszMagicUint64[0] || uint64[1] != trzszMagicUint64[1]) {
-    return null;
-  }
-  return uint8ToStr(uint8.subarray(idx));
 }
 
 /**
@@ -81,9 +84,9 @@ export class TrzszFilter {
     }
     this.sendToServer = options.sendToServer;
 
-    this.chooseSendFiles = options.chooseSendFiles ? options.chooseSendFiles : undefined;
-    this.chooseSaveDirectory = options.chooseSaveDirectory ? options.chooseSaveDirectory : undefined;
-    this.requireUserPermission = options.requireUserPermission ? options.requireUserPermission : undefined;
+    this.chooseSendFiles = options.chooseSendFiles;
+    this.chooseSaveDirectory = options.chooseSaveDirectory;
+    this.requireUserPermission = options.requireUserPermission;
     this.terminalColumns = options.terminalColumns ? options.terminalColumns : 80;
   }
 

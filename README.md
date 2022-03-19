@@ -1,6 +1,6 @@
 # trzsz.js
 
-Making webshell and terminal supports [trzsz](https://trzsz.github.io/) ( trz / tsz ), which similar to ( rz / sz ) , and compatible with tmux.
+Making webshell and terminal supports [trzsz](https://trzsz.github.io/) ( trz / tsz ), which similar to ( rz / sz ), and compatible with tmux.
 
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg?style=flat)](https://choosealicense.com/licenses/mit/)
 [![npmjs trzsz](https://img.shields.io/npm/v/trzsz.svg?style=flat)](https://www.npmjs.com/package/trzsz)
