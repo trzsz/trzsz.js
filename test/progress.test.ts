@@ -4,7 +4,7 @@
  * @license MIT
  */
 
-import { TextProgressBar, getSubstring } from "../src/progress";
+import { TextProgressBar, getEllipsisString } from "../src/progress";
 
 /* eslint-disable require-jsdoc */
 
@@ -23,6 +23,18 @@ beforeEach(() => {
 
 afterEach(() => {
   dateNowSpy.mockRestore();
+});
+
+
+test("progress bar empty file", () => {
+  dateNowSpy.mockReturnValueOnce(1646564135000).mockReturnValueOnce(1646564135000);
+  const writer = jest.fn();
+  const tgb = new TextProgressBar(writer, 100);
+  tgb.onNum(1);
+  tgb.onName("中文😀test.txt");
+  tgb.onSize(0);
+  tgb.onStep(0);
+  expect(writer.mock.calls.length).toBe(0);
 });
 
 test("progress bar NaN speed and eta", () => {
@@ -71,14 +83,14 @@ test("progress bar ouput once only", () => {
   expect(outputLength(writer.mock.calls[0][0])).toBe(100);
 });
 
-test("progress bar supper fast speed", () => {
+test("progress bar super fast speed", () => {
   dateNowSpy.mockReturnValueOnce(1646564135000).mockReturnValueOnce(1646564136000);
   const writer = jest.fn();
   const tgb = new TextProgressBar(writer, 100);
   tgb.onNum(1);
   tgb.onName("中文😀test.txt");
-  tgb.onSize(1024 * 1024 * 1024 * 1024 * 1024 * 1024);
-  tgb.onStep(10.1 * 1024 * 1024 * 1024 * 1024 * 1024);
+  tgb.onSize(1024 * 1024 * 1024 * 1024 * 1024);
+  tgb.onStep(10.1 * 1024 * 1024 * 1024 * 1024);
   expect(writer.mock.calls.length).toBe(1);
   expect(dateNowSpy.mock.calls.length).toBe(2);
   expect(writer.mock.calls[0][0]).toContain("中文😀test.txt [");
@@ -107,17 +119,17 @@ test("progress bar long file name", () => {
   const tgb = new TextProgressBar(writer, 110);
   tgb.onNum(1);
   tgb.onName("中文😀非常长非常长非常长非常长非常长非常长非常长非常长.txt");
-  tgb.onSize(1000);
-  tgb.onStep(100);
+  tgb.onSize(1000 * 1024);
+  tgb.onStep(100 * 1024);
   tgb.setTerminalColumns(100);
-  tgb.onStep(200);
+  tgb.onStep(200 * 1024);
   expect(writer.mock.calls.length).toBe(2);
   expect(dateNowSpy.mock.calls.length).toBe(3);
   expect(writer.mock.calls[0][0]).toContain("中文😀非常长非常长非常长非常长非常长非常长非常... [");
-  expect(writer.mock.calls[0][0]).toContain("] 10% | 100B | 100B/s | 00:09 ETA");
+  expect(writer.mock.calls[0][0]).toContain("] 10% | 100KB | 100KB/s | 00:09 ETA");
   expect(outputLength(writer.mock.calls[0][0])).toBe(110);
   expect(writer.mock.calls[1][0]).toContain("中文😀非常长非常长非常长非常长非常长... [");
-  expect(writer.mock.calls[1][0]).toContain("] 20% | 200B | 66.7B/s | 00:12 ETA");
+  expect(writer.mock.calls[1][0]).toContain("] 20% | 200KB | 66.7KB/s | 00:12 ETA");
   expect(outputLength(writer.mock.calls[1][0])).toBe(100);
 });
 
@@ -127,17 +139,17 @@ test("progress bar no total size", () => {
   const tgb = new TextProgressBar(writer, 90);
   tgb.onNum(1);
   tgb.onName("中文😀非常长非常长非常长非常长非常长非常长非常长非常长.txt");
-  tgb.onSize(1000);
-  tgb.onStep(100);
+  tgb.onSize(1000 * 1024 * 1024 * 1024);
+  tgb.onStep(100 * 1024 * 1024);
   tgb.setTerminalColumns(80);
-  tgb.onStep(200);
+  tgb.onStep(200 * 1024 * 1024 * 1024);
   expect(writer.mock.calls.length).toBe(2);
   expect(dateNowSpy.mock.calls.length).toBe(3);
   expect(writer.mock.calls[0][0]).toContain("中文😀非常长非常长非常长非常长非常长... [");
-  expect(writer.mock.calls[0][0]).toContain("] 10% | 100B/s | 00:09 ETA");
+  expect(writer.mock.calls[0][0]).toContain("] 0% | 100MB/s | 2:50:39 ETA");
   expect(outputLength(writer.mock.calls[0][0])).toBe(90);
   expect(writer.mock.calls[1][0]).toContain("中文😀非常长非常长非常长非... [");
-  expect(writer.mock.calls[1][0]).toContain("] 20% | 66.7B/s | 00:12 ETA");
+  expect(writer.mock.calls[1][0]).toContain("] 20% | 66.7GB/s | 00:12 ETA");
   expect(outputLength(writer.mock.calls[1][0])).toBe(80);
 });
 
@@ -225,14 +237,14 @@ test("progress bar multiple files", () => {
 });
 
 test("get substring with max length", () => {
-  expect(getSubstring("", 10)).toBe("");
-  expect(getSubstring("中文", 1)).toBe("");
-  expect(getSubstring("中文", 2)).toBe("中");
-  expect(getSubstring("😀中", 2)).toBe("😀");
-  expect(getSubstring("😀中", 3)).toBe("😀");
-  expect(getSubstring("😀中", 4)).toBe("😀中");
-  expect(getSubstring("😀q中", 2)).toBe("😀");
-  expect(getSubstring("😀a中", 3)).toBe("😀a");
-  expect(getSubstring("😀a中", 4)).toBe("😀a");
-  expect(getSubstring("😀a中", 5)).toBe("😀a中");
+  expect(getEllipsisString("", 10)).toStrictEqual({ sub: "...", len: 3 });
+  expect(getEllipsisString("中文", 1)).toStrictEqual({ sub: "...", len: 3 });
+  expect(getEllipsisString("中文", 5)).toStrictEqual({ sub: "中...", len: 5 });
+  expect(getEllipsisString("😀中", 5)).toStrictEqual({ sub: "😀...", len: 5 });
+  expect(getEllipsisString("😀中", 6)).toStrictEqual({ sub: "😀...", len: 5 });
+  expect(getEllipsisString("😀中", 7)).toStrictEqual({ sub: "😀中...", len: 7 });
+  expect(getEllipsisString("😀q中", 5)).toStrictEqual({ sub: "😀...", len: 5 });
+  expect(getEllipsisString("😀a中", 6)).toStrictEqual({ sub: "😀a...", len: 6 });
+  expect(getEllipsisString("😀a中", 7)).toStrictEqual({ sub: "😀a...", len: 6 });
+  expect(getEllipsisString("😀a中", 8)).toStrictEqual({ sub: "😀a中...", len: 8 });
 });

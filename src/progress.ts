@@ -12,24 +12,25 @@ function getLength(str: string): number {
   return str.replace(/[\u4e00-\u9fa5]/g, "**").length;
 }
 
-export function getSubstring(str: string, max: number): string {
+export function getEllipsisString(str: string, max: number) {
+  max -= 3;
   let len = 0;
   let sub = "";
   for (let i = 0; i < str.length; i++) {
     if (str.charCodeAt(i) >= 0x4e00 && str.charCodeAt(i) <= 0x9fa5) {
       if (len + 2 > max) {
-        return sub;
+        return { sub: sub + "...", len: len + 3 };
       }
       len += 2;
     } else {
       if (len + 1 > max) {
-        return sub;
+        return { sub: sub + "...", len: len + 3 };
       }
       len += 1;
     }
     sub += str[i];
   }
-  return str;
+  return { sub: sub + "...", len: len + 3 };
 }
 
 function convertSizeToString(size: number): string {
@@ -38,37 +39,39 @@ function convertSizeToString(size: number): string {
   }
 
   let unit = "B";
-  if (size > 1024) {
+  do {
+    if (size < 1024) {
+      break;
+    }
     size = size / 1024;
     unit = "KB";
-  }
-  if (size > 1024) {
+
+    if (size < 1024) {
+      break;
+    }
     size = size / 1024;
     unit = "MB";
-  }
-  if (size > 1024) {
+
+    if (size < 1024) {
+      break;
+    }
     size = size / 1024;
     unit = "GB";
-  }
-  if (size > 1024) {
-    size = size / 1024;
-    unit = "GB";
-  }
-  if (size > 1024) {
+
+    if (size < 1024) {
+      break;
+    }
     size = size / 1024;
     unit = "TB";
-  }
+  } while (false);
 
-  let result;
   if (size >= 100) {
-    result = size.toFixed(0);
+    return size.toFixed(0) + unit;
   } else if (size >= 10) {
-    result = size.toFixed(1);
+    return size.toFixed(1) + unit;
   } else {
-    result = size.toFixed(2);
+    return size.toFixed(2) + unit;
   }
-
-  return result + unit;
 }
 
 function convertTimeToString(seconds: number) {
@@ -134,11 +137,14 @@ export class TextProgressBar implements ProgressCallback {
 
   private showProgress() {
     const now = Date.now();
-    if (now - this.lastUpdateTime < 200) {
+    if (now - this.lastUpdateTime < 500) {
       return;
     }
     this.lastUpdateTime = now;
 
+    if (this.fileSize == 0) {
+      return;
+    }
     const percentage = Math.round((this.fileStep * 100) / this.fileSize).toString() + "%";
     const total = convertSizeToString(this.fileStep);
     const speed = convertSizeToString((this.fileStep * 1000) / (now - this.startTime)) + "/s";
@@ -159,17 +165,15 @@ export class TextProgressBar implements ProgressCallback {
       if (this.columns - leftLength - right.length >= barMinLength) {
         break;
       }
-      if (leftLength > 47) {
-        left = getSubstring(left, 47) + "...";
-        leftLength = getLength(left);
+      if (leftLength > 50) {
+        ({ sub: left, len: leftLength } = getEllipsisString(left, 50));
       }
 
       if (this.columns - leftLength - right.length >= barMinLength) {
         break;
       }
-      if (leftLength > 37) {
-        left = getSubstring(left, 37) + "...";
-        leftLength = getLength(left);
+      if (leftLength > 40) {
+        ({ sub: left, len: leftLength } = getEllipsisString(left, 40));
       }
 
       if (this.columns - leftLength - right.length >= barMinLength) {
@@ -180,9 +184,8 @@ export class TextProgressBar implements ProgressCallback {
       if (this.columns - leftLength - right.length >= barMinLength) {
         break;
       }
-      if (leftLength > 27) {
-        left = getSubstring(left, 27) + "...";
-        leftLength = getLength(left);
+      if (leftLength > 30) {
+        ({ sub: left, len: leftLength } = getEllipsisString(left, 30));
       }
 
       if (this.columns - leftLength - right.length >= barMinLength) {
@@ -198,9 +201,8 @@ export class TextProgressBar implements ProgressCallback {
       if (this.columns - leftLength - right.length >= barMinLength) {
         break;
       }
-      if (leftLength > 17) {
-        left = getSubstring(left, 17) + "...";
-        leftLength = getLength(left);
+      if (leftLength > 20) {
+        ({ sub: left, len: leftLength } = getEllipsisString(left, 20));
       }
 
       if (this.columns - leftLength - right.length >= barMinLength) {
