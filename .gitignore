@@ -106,4 +106,3 @@ dist
 # Other ignore files
 lib/
 *.swp
-package-lock.json
