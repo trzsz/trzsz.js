@@ -1,0 +1,22 @@
+name: Publish trzsz.js to npmjs
+on:
+  release:
+    types: [released]
+jobs:
+  build-and-publish:
+    name: Build and publish trzsz.js to npmjs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout trzsz.js
+        uses: actions/checkout@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16.x'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Install trzsz.js Dependencies
+        run: npm ci
+      - name: Publish trzsz.js to npmjs
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}
