@@ -116,10 +116,9 @@ test("trz upload files using addon", async () => {
 
   onMessage({ data: "Received test.txt.0 to /tmp\n" });
 
-  expect(term.write.mock.calls.length).toBe(4);
+  expect(term.write.mock.calls.length).toBe(3);
   expect(term.write.mock.calls[1][0]).toContain("test.txt [");
-  expect(term.write.mock.calls[2][0]).toBe("\r");
-  expect(term.write.mock.calls[3][0]).toBe("Received test.txt.0 to /tmp\n");
+  expect(term.write.mock.calls[2][0]).toBe("Received test.txt.0 to /tmp\n");
 
   ws.listener["close"]();
   expect(term.mockDispose.dispose.mock.calls.length).toBe(3);
@@ -183,10 +182,9 @@ test("tsz download files using addon", async () => {
 
   onMessage({ data: "Saved test.txt.0 to /tmp\n" });
 
-  expect(term.write.mock.calls.length).toBe(4);
+  expect(term.write.mock.calls.length).toBe(3);
   expect(term.write.mock.calls[1][0]).toContain("test.txt [");
-  expect(term.write.mock.calls[2][0]).toBe("\r");
-  expect(term.write.mock.calls[3][0]).toBe("Saved test.txt.0 to /tmp\n");
+  expect(term.write.mock.calls[2][0]).toBe("Saved test.txt.0 to /tmp\n");
 
   expect(file.closeFile.mock.calls.length).toBeGreaterThanOrEqual(1);
   expect(file.getName.mock.calls.length).toBe(1);

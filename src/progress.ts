@@ -105,14 +105,26 @@ export class TextProgressBar implements ProgressCallback {
   private fileSize: number;
   private fileStep: number;
   private startTime: number;
+  private tmuxPaneColumns: number;
+  private firstWrite: boolean = true;
 
-  public constructor(writer: (output: string) => void, columns: number) {
+  public constructor(
+    writer: (output: string) => void,
+    columns: number,
+    tmuxPaneColumns: number | undefined = undefined
+  ) {
     this.writer = writer;
-    this.columns = columns;
+    this.tmuxPaneColumns = tmuxPaneColumns || -1;
+    // -1 to avoid xterm.js messing up the tmux pane
+    this.columns = this.tmuxPaneColumns > 1 ? this.tmuxPaneColumns - 1: columns;
   }
 
   public setTerminalColumns(columns: number): void {
     this.columns = columns;
+    // resizing tmux panes is not supported
+    if (this.tmuxPaneColumns > 0) {
+      this.tmuxPaneColumns = -1;
+    }
   }
 
   public onNum(num: number) {
@@ -152,7 +164,18 @@ export class TextProgressBar implements ProgressCallback {
     const eta = convertTimeToString(leftTime) + " ETA";
 
     const progressText = this.getProgressText(percentage, total, speed, eta);
-    this.writer("\r" + progressText);
+
+    if (this.firstWrite) {
+      this.firstWrite = false;
+      this.writer(progressText);
+      return;
+    }
+
+    if (this.tmuxPaneColumns > 0) {
+      this.writer(`\x1b[${this.columns}D${progressText}`);
+    } else {
+      this.writer(`\r${progressText}`);
+    }
   }
 
   private getProgressText(percentage: string, total: string, speed: string, eta: string) {
@@ -232,7 +255,5 @@ export class TextProgressBar implements ProgressCallback {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public onDone(name: string) {
-    this.writer("\r");
-  }
+  public onDone(name: string) {}
 }

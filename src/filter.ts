@@ -17,7 +17,7 @@ import { strToUint8, uint8ToStr } from "./comm";
  */
 const trzszMagicKeyPrefix = "::TRZSZ:TRANSFER:";
 const trzszMagicKeyRegExp = new RegExp(/::TRZSZ:TRANSFER:([SR]):(\d+\.\d+\.\d+)(:\d+)?/);
-const trzszMagicUint64 = new Float64Array(strToUint8(trzszMagicKeyPrefix).buffer, 0, 2);
+const trzszMagicArray = new Float64Array(strToUint8(trzszMagicKeyPrefix).buffer, 0, 2);
 
 /**
  * Find the trzsz magic key from output buffer.
@@ -45,8 +45,8 @@ export async function findTrzszMagicKey(output: string | ArrayBuffer | Uint8Arra
     if (idx < 0 || uint8.length - idx < 16) {
       return null;
     }
-    const uint64 = new Float64Array(uint8.buffer.slice(uint8.byteOffset + idx, uint8.byteOffset + idx + 16));
-    if (uint64[0] == trzszMagicUint64[0] && uint64[1] == trzszMagicUint64[1]) {
+    const arr = new Float64Array(uint8.buffer.slice(uint8.byteOffset + idx, uint8.byteOffset + idx + 16));
+    if (arr[0] == trzszMagicArray[0] && arr[1] == trzszMagicArray[1]) {
       return uint8ToStr(uint8.subarray(idx));
     }
   }
@@ -219,7 +219,7 @@ export class TrzszFilter {
     const config = await this.trzszTransfer.recvConfig();
 
     if (config.quiet !== true) {
-      this.textProgressBar = new TextProgressBar(this.writeToTerminal, this.terminalColumns);
+      this.textProgressBar = new TextProgressBar(this.writeToTerminal, this.terminalColumns, config.tmux_pane_width);
     }
 
     const localNames = await this.trzszTransfer.recvFiles(saveParam, openSaveFile, this.textProgressBar);
@@ -247,7 +247,7 @@ export class TrzszFilter {
     const config = await this.trzszTransfer.recvConfig();
 
     if (config.quiet !== true) {
-      this.textProgressBar = new TextProgressBar(this.writeToTerminal, this.terminalColumns);
+      this.textProgressBar = new TextProgressBar(this.writeToTerminal, this.terminalColumns, config.tmux_pane_width);
     }
 
     const remoteNames = await this.trzszTransfer.sendFiles(sendFiles, this.textProgressBar);

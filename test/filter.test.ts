@@ -186,10 +186,9 @@ test("trz upload files", async () => {
 
   trzsz.processServerOutput("Received test.txt.0 to /tmp\n");
 
-  expect(writeToTerminal.mock.calls.length).toBe(4);
+  expect(writeToTerminal.mock.calls.length).toBe(3);
   expect(writeToTerminal.mock.calls[1][0]).toContain("test.txt [");
-  expect(writeToTerminal.mock.calls[2][0]).toBe("\r");
-  expect(writeToTerminal.mock.calls[3][0]).toBe("Received test.txt.0 to /tmp\n");
+  expect(writeToTerminal.mock.calls[2][0]).toBe("Received test.txt.0 to /tmp\n");
 });
 
 test("tsz download files", async () => {
@@ -236,10 +235,9 @@ test("tsz download files", async () => {
 
   trzsz.processServerOutput("Saved test.txt.0 to /tmp\n");
 
-  expect(writeToTerminal.mock.calls.length).toBe(4);
+  expect(writeToTerminal.mock.calls.length).toBe(3);
   expect(writeToTerminal.mock.calls[1][0]).toContain("test.txt [");
-  expect(writeToTerminal.mock.calls[2][0]).toBe("\r");
-  expect(writeToTerminal.mock.calls[3][0]).toBe("Saved test.txt.0 to /tmp\n");
+  expect(writeToTerminal.mock.calls[2][0]).toBe("Saved test.txt.0 to /tmp\n");
 
   expect(fs.readFileSync(path.join(tmpDir, "test.txt.0")).toString()).toBe("test content\n");
 });
@@ -386,10 +384,9 @@ test("trz upload files in browser", async () => {
 
   trzsz.processServerOutput("Received test.txt.0 to /tmp\n");
 
-  expect(writeToTerminal.mock.calls.length).toBe(4);
+  expect(writeToTerminal.mock.calls.length).toBe(3);
   expect(writeToTerminal.mock.calls[1][0]).toContain("test.txt [");
-  expect(writeToTerminal.mock.calls[2][0]).toBe("\r");
-  expect(writeToTerminal.mock.calls[3][0]).toBe("Received test.txt.0 to /tmp\n");
+  expect(writeToTerminal.mock.calls[2][0]).toBe("Received test.txt.0 to /tmp\n");
 
   selectSendFiles.mockRestore();
 });
@@ -447,10 +444,9 @@ test("tsz download files in browser", async () => {
 
   trzsz.processServerOutput("Saved test.txt.0 to /tmp\n");
 
-  expect(writeToTerminal.mock.calls.length).toBe(4);
+  expect(writeToTerminal.mock.calls.length).toBe(3);
   expect(writeToTerminal.mock.calls[1][0]).toContain("test.txt [");
-  expect(writeToTerminal.mock.calls[2][0]).toBe("\r");
-  expect(writeToTerminal.mock.calls[3][0]).toBe("Saved test.txt.0 to /tmp\n");
+  expect(writeToTerminal.mock.calls[2][0]).toBe("Saved test.txt.0 to /tmp\n");
 
   expect(file.closeFile.mock.calls.length).toBeGreaterThanOrEqual(1);
   expect(file.getName.mock.calls.length).toBe(1);
@@ -522,10 +518,9 @@ test("require user permission in browser", async () => {
 
   trzsz.processServerOutput("Saved test.txt.0 to /tmp\n");
 
-  expect(writeToTerminal.mock.calls.length).toBe(4);
+  expect(writeToTerminal.mock.calls.length).toBe(3);
   expect(writeToTerminal.mock.calls[1][0]).toContain("test.txt [");
-  expect(writeToTerminal.mock.calls[2][0]).toBe("\r");
-  expect(writeToTerminal.mock.calls[3][0]).toBe("Saved test.txt.0 to /tmp\n");
+  expect(writeToTerminal.mock.calls[2][0]).toBe("Saved test.txt.0 to /tmp\n");
 
   expect(mockFileStream.write.mock.calls.length).toBe(1);
   expect(mockFileStream.write.mock.calls[0][0]).toStrictEqual(strToUint8("test content\n"));

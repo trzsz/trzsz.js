@@ -11,7 +11,7 @@ import { TextProgressBar, getEllipsisString } from "../src/progress";
 function outputLength(str: string): number {
   return str
     .replace("\r", "")
-    .replace(/\u001b\[\d+m/g, "")
+    .replace(/\u001b\[\d+[mD]/g, "")
     .replace(/[\u4e00-\u9fa5]/g, "**").length;
 }
 
@@ -24,7 +24,6 @@ beforeEach(() => {
 afterEach(() => {
   dateNowSpy.mockRestore();
 });
-
 
 test("progress bar empty file", () => {
   dateNowSpy.mockReturnValueOnce(1646564135000).mockReturnValueOnce(1646564135000);
@@ -224,16 +223,51 @@ test("progress bar multiple files", () => {
   tgb.setTerminalColumns(80);
   tgb.onStep(300);
   tgb.onDone("test.txt");
-  expect(writer.mock.calls.length).toBe(4);
+  expect(writer.mock.calls.length).toBe(2);
   expect(dateNowSpy.mock.calls.length).toBe(4);
   expect(writer.mock.calls[0][0]).toContain("(1/2) 中文😀test.txt [");
   expect(writer.mock.calls[0][0]).toContain("] 10% | 100B | 100B/s | 00:09 ETA");
   expect(outputLength(writer.mock.calls[0][0])).toBe(100);
-  expect(writer.mock.calls[1][0]).toBe("\r");
-  expect(writer.mock.calls[2][0]).toContain("(2/2) 英文😀test.txt [");
-  expect(writer.mock.calls[2][0]).toContain("] 15% | 300B | 150B/s | 00:11 ETA");
-  expect(outputLength(writer.mock.calls[2][0])).toBe(80);
-  expect(writer.mock.calls[3][0]).toBe("\r");
+  expect(writer.mock.calls[1][0]).toContain("(2/2) 英文😀test.txt [");
+  expect(writer.mock.calls[1][0]).toContain("] 15% | 300B | 150B/s | 00:11 ETA");
+  expect(outputLength(writer.mock.calls[1][0])).toBe(80);
+});
+
+test("progress bar in tmux pane", () => {
+  dateNowSpy
+    .mockReturnValueOnce(1646564135000)
+    .mockReturnValueOnce(1646564136000)
+    .mockReturnValueOnce(1646564137000)
+    .mockReturnValueOnce(1646564138000);
+  const writer = jest.fn();
+  const tgb = new TextProgressBar(writer, 100, 80);
+  tgb.onNum(1);
+  tgb.onName("中文😀test.txt");
+  tgb.onSize(1000);
+  tgb.onStep(100);
+  tgb.onStep(200);
+  tgb.setTerminalColumns(120);
+  tgb.onStep(300);
+
+  expect(writer.mock.calls.length).toBe(3);
+  expect(dateNowSpy.mock.calls.length).toBe(4);
+  expect(writer.mock.calls[0][0]).not.toContain("\r");
+  expect(writer.mock.calls[0][0]).not.toContain("\x1b[79D");
+  expect(writer.mock.calls[0][0]).toContain("中文😀test.txt [");
+  expect(writer.mock.calls[0][0]).toContain("] 10% | 100B | 100B/s | 00:09 ETA");
+  expect(outputLength(writer.mock.calls[0][0])).toBe(79);
+
+  expect(writer.mock.calls[1][0]).not.toContain("\r");
+  expect(writer.mock.calls[1][0]).toContain("\x1b[79D");
+  expect(writer.mock.calls[1][0]).toContain("中文😀test.txt [");
+  expect(writer.mock.calls[1][0]).toContain("] 20% | 200B | 100B/s | 00:08 ETA");
+  expect(outputLength(writer.mock.calls[1][0])).toBe(79);
+
+  expect(writer.mock.calls[2][0]).toContain("\r");
+  expect(writer.mock.calls[2][0]).not.toContain("\x1b[79D");
+  expect(writer.mock.calls[2][0]).toContain("中文😀test.txt [");
+  expect(writer.mock.calls[2][0]).toContain("] 30% | 300B | 100B/s | 00:07 ETA");
+  expect(outputLength(writer.mock.calls[2][0])).toBe(120);
 });
 
 test("get substring with max length", () => {
