@@ -4,7 +4,7 @@
  * @license MIT
  */
 
-import { strToUint8, encodeBuffer, decodeBuffer, TrzszError } from "../src/comm";
+import { strToUint8, uint8ToStr, encodeBuffer, decodeBuffer, TrzszError } from "../src/comm";
 
 test("zlib and base64 encode buffer", () => {
   expect(encodeBuffer("abc")).toBe("eJxLTEoGAAJNASc=");
@@ -18,6 +18,21 @@ test("base64 and zlib decode buffer", () => {
   expect(decodeBuffer("eJxzdHJ2cQUAA+gBUA==")).toStrictEqual(strToUint8("ABCDE"));
   expect(decodeBuffer("eJwDAAAAAAE=")).toStrictEqual(strToUint8(""));
   expect(decodeBuffer("eJwzBAAAMgAy")).toStrictEqual(strToUint8("1"));
+});
+
+test("string and Uint8Array transform", async () => {
+  const str1 = "\x00\x01\xFF\xFE\xEE\xDD\xCC\xBB\xAA";
+  const str2 = "\xAB\xCD\xEF\xFE\xDC\xBA\x80\x81\x82\x83\x84";
+  expect(await uint8ToStr(strToUint8(str1))).toBe(str1);
+  expect(await uint8ToStr(strToUint8(str2))).toBe(str2);
+  const buffer = global.Buffer;
+  global.Buffer = undefined;
+  try {
+    expect(await uint8ToStr(strToUint8(str1))).toBe(str1);
+    expect(await uint8ToStr(strToUint8(str2))).toBe(str2);
+  } finally {
+    global.Buffer = buffer;
+  }
 });
 
 test("trzsz error remote exit", () => {

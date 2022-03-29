@@ -14,10 +14,13 @@ export function strToUint8(str: string): Uint8Array {
 }
 
 export async function uint8ToStr(buf: Uint8Array): Promise<string> {
+  if (typeof Buffer === "function") {
+    return Buffer.from(buf).toString("latin1");
+  }
   return new Promise<string>((resolve) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve(reader.result as string);
-    reader.readAsText(new Blob([buf]));
+    reader.readAsBinaryString(new Blob([buf]));
   });
 }
 

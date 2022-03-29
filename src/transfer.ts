@@ -107,6 +107,7 @@ export class TrzszTransfer {
   private cleanTimeoutInMilliseconds: number = 100;
   private transferConfig: any = {};
   private stopped: boolean = false;
+  private maxChunkTimeInMilliseconds: number = 0;
 
   public constructor(writer: (data: string | Uint8Array) => void) {
     this.writer = writer;
@@ -124,7 +125,7 @@ export class TrzszTransfer {
   }
 
   public async stopTransferring() {
-    this.cleanTimeoutInMilliseconds = 500;
+    this.cleanTimeoutInMilliseconds = Math.max(this.maxChunkTimeInMilliseconds * 2, 500);
     this.stopped = true;
     this.buffer.stopBuffer();
   }
@@ -346,6 +347,7 @@ export class TrzszTransfer {
       let step = 0;
       const md5 = new Md5();
       while (step < fileSize) {
+        const beginTime = Date.now();
         const data = await file.readFile(buffer);
         await this.sendData(data, binary, escapeCodes);
         md5.appendByteArray(data);
@@ -353,6 +355,10 @@ export class TrzszTransfer {
         step += data.length;
         if (progressCallback) {
           progressCallback.onStep(step);
+        }
+        const chunkTime = Date.now() - beginTime;
+        if (chunkTime > this.maxChunkTimeInMilliseconds) {
+          this.maxChunkTimeInMilliseconds = chunkTime;
         }
       }
       file.closeFile();
@@ -401,6 +407,7 @@ export class TrzszTransfer {
       let step = 0;
       const md5 = new Md5();
       while (step < fileSize) {
+        const beginTime = Date.now();
         const data = await this.recvData(binary, escapeCodes, timeoutInMilliseconds);
         await file.writeFile(data);
         step += data.length;
@@ -409,6 +416,10 @@ export class TrzszTransfer {
         }
         await this.sendInteger("SUCC", data.length);
         md5.appendByteArray(data);
+        const chunkTime = Date.now() - beginTime;
+        if (chunkTime > this.maxChunkTimeInMilliseconds) {
+          this.maxChunkTimeInMilliseconds = chunkTime;
+        }
       }
       file.closeFile();
 

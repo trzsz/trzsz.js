@@ -99,7 +99,7 @@ export class TrzszFilter {
       this.trzszTransfer.addReceivedData(output);
       return;
     }
-    void this.detectAndHandleTrzsz(output);
+    setTimeout(() => this.detectAndHandleTrzsz(output), 10);
     this.writeToTerminal(output);
   }
 
