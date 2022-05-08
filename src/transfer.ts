@@ -326,8 +326,11 @@ export class TrzszTransfer {
 
     const remoteNames = [];
     const binary = this.transferConfig.binary === true;
-    const buffer = new ArrayBuffer(this.transferConfig.bufsize ? this.transferConfig.bufsize : 10240);
+    const maxBufSize = this.transferConfig.bufsize ? this.transferConfig.bufsize : 10 * 1024 * 1024;
     const escapeCodes = this.transferConfig.escape_chars ? escapeCharsToCodes(this.transferConfig.escape_chars) : [];
+
+    let bufSize = 1024;
+    let buffer = new ArrayBuffer(bufSize);
 
     for (const file of files) {
       const fileName = file.getName();
@@ -357,6 +360,10 @@ export class TrzszTransfer {
           progressCallback.onStep(step);
         }
         const chunkTime = Date.now() - beginTime;
+        if (chunkTime < 1000 && bufSize < maxBufSize) {
+          bufSize = Math.min(bufSize * 2, maxBufSize);
+          buffer = new ArrayBuffer(bufSize);
+        }
         if (chunkTime > this.maxChunkTimeInMilliseconds) {
           this.maxChunkTimeInMilliseconds = chunkTime;
         }
