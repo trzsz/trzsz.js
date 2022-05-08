@@ -1,6 +1,6 @@
 {
   "name": "trzsz",
-  "version": "0.3.4",
+  "version": "0.4.0",
   "description": "Making webshell and terminal supports trzsz ( trz / tsz ), which similar to ( rz / sz ), and compatible with tmux.",
   "main": "lib/trzsz.js",
   "types": "lib/trzsz.d.ts",
@@ -49,6 +49,7 @@
     "@types/node": "^17.0.17",
     "@typescript-eslint/eslint-plugin": "^5.11.0",
     "@typescript-eslint/parser": "^5.11.0",
+    "argparse": "^2.0.1",
     "base64-js": "^1.5.1",
     "eslint": "^8.8.0",
     "eslint-config-google": "^0.14.0",

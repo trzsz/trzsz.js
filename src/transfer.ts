@@ -7,6 +7,7 @@
 import { Md5 } from "ts-md5";
 import { TrzszBuffer } from "./buffer";
 import {
+  trzszVersion,
   uint8ToStr,
   encodeBuffer,
   decodeBuffer,
@@ -16,11 +17,6 @@ import {
   TrzszFileReader,
   ProgressCallback,
 } from "./comm";
-
-/**
- * trzsz version injected by rollup-plugin-version-injector
- */
-const trzszVersion = "[VersionInject]{version}[/VersionInject]";
 
 /* eslint-disable require-jsdoc */
 

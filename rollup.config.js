@@ -21,7 +21,7 @@ export default [
       format: "cjs",
       sourcemap: true,
     },
-    plugins: [version, typescript(), nodeResolve(), commonjs(), terser({ format: { comments: false } })],
+    plugins: [version, typescript(), nodeResolve(), commonjs()],
   },
   {
     input: "src/tsz.ts",
@@ -30,7 +30,7 @@ export default [
       format: "cjs",
       sourcemap: true,
     },
-    plugins: [version, typescript(), nodeResolve(), commonjs(), terser({ format: { comments: false } })],
+    plugins: [version, typescript(), nodeResolve(), commonjs()],
   },
   {
     input: "src/trzsz.ts",

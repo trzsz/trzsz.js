@@ -7,6 +7,11 @@
 import * as Pako from "pako";
 import * as Base64 from "base64-js";
 
+/**
+ * trzsz version injected by rollup-plugin-version-injector
+ */
+export const trzszVersion = "[VersionInject]{version}[/VersionInject]";
+
 /* eslint-disable require-jsdoc */
 
 export function strToUint8(str: string): Uint8Array {
