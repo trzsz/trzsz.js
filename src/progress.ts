@@ -116,7 +116,7 @@ export class TextProgressBar implements ProgressCallback {
     this.writer = writer;
     this.tmuxPaneColumns = tmuxPaneColumns || -1;
     // -1 to avoid xterm.js messing up the tmux pane
-    this.columns = this.tmuxPaneColumns > 1 ? this.tmuxPaneColumns - 1: columns;
+    this.columns = this.tmuxPaneColumns > 1 ? this.tmuxPaneColumns - 1 : columns;
   }
 
   public setTerminalColumns(columns: number): void {

@@ -35,6 +35,12 @@ export class TrzszBuffer {
     }
   }
 
+  public drainBuffer() {
+    this.bufArray = [];
+    this.bufHead = 0;
+    this.bufTail = 0;
+  }
+
   private async toUint8Array(buf: string | ArrayBuffer | Uint8Array | Blob) {
     if (typeof buf === "string") {
       return strToUint8(buf);

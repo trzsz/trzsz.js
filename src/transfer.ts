@@ -6,6 +6,7 @@
 
 import { Md5 } from "ts-md5";
 import { TrzszBuffer } from "./buffer";
+import { escapeCharsToCodes, escapeData, unescapeData } from "./escape";
 import {
   trzszVersion,
   uint8ToStr,
@@ -19,80 +20,6 @@ import {
 } from "./comm";
 
 /* eslint-disable require-jsdoc */
-
-export function getEscapeChars(escapeAll: boolean): Array<string[]> {
-  const escapeChars = [
-    ["\xee", "\xee\xee"],
-    ["\x7e", "\xee\x31"],
-  ];
-  if (escapeAll) {
-    const chars = "\x02\x10\x1b\x1d\x9d";
-    for (let i = 0; i < chars.length; i++) {
-      escapeChars.push([chars[i], "\xee" + String.fromCharCode(0x41 + i)]);
-    }
-  }
-  return escapeChars;
-}
-
-function escapeCharsToCodes(escapeChars: Array<string[]>): Array<number[]> {
-  const escapeCodes = [];
-  for (let i = 0; i < escapeChars.length; i++) {
-    escapeCodes.push([
-      escapeChars[i][0].charCodeAt(0),
-      escapeChars[i][1].charCodeAt(0),
-      escapeChars[i][1].charCodeAt(1),
-    ]);
-  }
-  return escapeCodes;
-}
-
-function escapeData(data: Uint8Array, escapeCodes: Array<number[]>): Uint8Array {
-  const buf = new Uint8Array(data.length * 2);
-
-  let idx = 0;
-  for (let i = 0; i < data.length; i++) {
-    let escapeIdx = -1;
-    for (let j = 0; j < escapeCodes.length; j++) {
-      if (data[i] == escapeCodes[j][0]) {
-        escapeIdx = j;
-        break;
-      }
-    }
-    if (escapeIdx < 0) {
-      buf[idx++] = data[i];
-    } else {
-      buf[idx++] = escapeCodes[escapeIdx][1];
-      buf[idx++] = escapeCodes[escapeIdx][2];
-    }
-  }
-
-  return buf.subarray(0, idx);
-}
-
-function unescapeData(data: Uint8Array, escapeCodes: Array<number[]>): Uint8Array {
-  const buf = new Uint8Array(data.length);
-
-  let idx = 0;
-  for (let i = 0; i < data.length; i++) {
-    let escapeIdx = -1;
-    if (i < data.length - 1) {
-      for (let j = 0; j < escapeCodes.length; j++) {
-        if (data[i] == escapeCodes[j][1] && data[i + 1] == escapeCodes[j][2]) {
-          escapeIdx = j;
-          break;
-        }
-      }
-    }
-    if (escapeIdx < 0) {
-      buf[idx++] = data[i];
-    } else {
-      buf[idx++] = escapeCodes[escapeIdx][0];
-      i++;
-    }
-  }
-
-  return buf.subarray(0, idx);
-}
 
 export class TrzszTransfer {
   private buffer: TrzszBuffer = new TrzszBuffer();
@@ -116,7 +43,9 @@ export class TrzszTransfer {
   }
 
   public addReceivedData(data: string | ArrayBuffer | Uint8Array | Blob) {
-    this.buffer.addBuffer(data);
+    if (!this.stopped) {
+      this.buffer.addBuffer(data);
+    }
     this.lastInputTime = Date.now();
   }
 
@@ -127,6 +56,11 @@ export class TrzszTransfer {
   }
 
   private async cleanInput(timeoutInMilliseconds: number) {
+    this.stopped = true;
+    this.buffer.drainBuffer();
+    if (this.lastInputTime == 0) {
+      return;
+    }
     while (true) {
       const sleepTime = timeoutInMilliseconds - (Date.now() - this.lastInputTime);
       if (sleepTime <= 0) {
@@ -166,7 +100,7 @@ export class TrzszTransfer {
     const line = await this.recvLine(expectType, mayHasJunk);
     const idx = line.indexOf(":");
     if (idx < 1) {
-      throw new TrzszError(line, null, true);
+      throw new TrzszError(encodeBuffer(line), "colon", true);
     }
     const typ = line.substring(1, idx);
     const buf = line.substring(idx + 1);
@@ -313,6 +247,10 @@ export class TrzszTransfer {
   public async sendFiles(files: TrzszFileReader[], progressCallback: ProgressCallback) {
     this.openedFiles.push(...files);
 
+    const binary = this.transferConfig.binary === true;
+    const maxBufSize = this.transferConfig.bufsize ? this.transferConfig.bufsize : 10 * 1024 * 1024;
+    const escapeCodes = this.transferConfig.escape_chars ? escapeCharsToCodes(this.transferConfig.escape_chars) : [];
+
     const num = files.length;
     await this.sendInteger("NUM", num);
     await this.checkInteger(num);
@@ -320,14 +258,9 @@ export class TrzszTransfer {
       progressCallback.onNum(num);
     }
 
-    const remoteNames = [];
-    const binary = this.transferConfig.binary === true;
-    const maxBufSize = this.transferConfig.bufsize ? this.transferConfig.bufsize : 10 * 1024 * 1024;
-    const escapeCodes = this.transferConfig.escape_chars ? escapeCharsToCodes(this.transferConfig.escape_chars) : [];
-
     let bufSize = 1024;
     let buffer = new ArrayBuffer(bufSize);
-
+    const remoteNames = [];
     for (const file of files) {
       const fileName = file.getName();
       await this.sendString("NAME", fileName);
@@ -379,6 +312,11 @@ export class TrzszTransfer {
   }
 
   public async recvFiles(saveParam: any, openSaveFile: OpenSaveFile, progressCallback: ProgressCallback) {
+    const binary = this.transferConfig.binary === true;
+    const overwrite = this.transferConfig.overwrite === true;
+    const timeoutInMilliseconds = this.transferConfig.timeout ? this.transferConfig.timeout * 1000 : 100000;
+    const escapeCodes = this.transferConfig.escape_chars ? escapeCharsToCodes(this.transferConfig.escape_chars) : [];
+
     const num = await this.recvInteger("NUM");
     await this.sendInteger("SUCC", num);
     if (progressCallback) {
@@ -386,11 +324,6 @@ export class TrzszTransfer {
     }
 
     const localNames = [];
-    const binary = this.transferConfig.binary === true;
-    const overwrite = this.transferConfig.overwrite === true;
-    const timeoutInMilliseconds = this.transferConfig.timeout ? this.transferConfig.timeout * 1000 : 100000;
-    const escapeCodes = this.transferConfig.escape_chars ? escapeCharsToCodes(this.transferConfig.escape_chars) : [];
-
     for (let i = 0; i < num; i++) {
       const fileName = await this.recvString("NAME");
       const file = await openSaveFile(saveParam, fileName, overwrite);

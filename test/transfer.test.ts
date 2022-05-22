@@ -5,7 +5,8 @@
  */
 
 import { strToUint8, TrzszError } from "../src/comm";
-import { TrzszTransfer, getEscapeChars } from "../src/transfer";
+import { getEscapeChars } from "../src/escape";
+import { TrzszTransfer } from "../src/transfer";
 
 /* eslint-disable require-jsdoc */
 
@@ -545,10 +546,10 @@ test("receive invalid data", async () => {
   const trzsz: any = new TrzszTransfer(writer);
 
   trzsz.addReceivedData("data\n");
-  await expect(trzsz.recvCheck("DATA")).rejects.toThrowError("data");
+  await expect(trzsz.recvCheck("DATA")).rejects.toThrowError("colon: eJxLSSxJBAAEAAGb");
 
   trzsz.addReceivedData(":data\n");
-  await expect(trzsz.recvCheck("DATA")).rejects.toThrowError(":data");
+  await expect(trzsz.recvCheck("DATA")).rejects.toThrowError("colon: eJyzSkksSQQABSMB1Q==");
 
   trzsz.addReceivedData("T:data\n");
   await expect(trzsz.recvCheck("T")).rejects.toThrowError("data");
