@@ -9,6 +9,7 @@ import { TrzszBuffer } from "./buffer";
 import { escapeCharsToCodes, escapeData, unescapeData } from "./escape";
 import {
   trzszVersion,
+  isRunningInBrowser,
   uint8ToStr,
   encodeBuffer,
   decodeBuffer,
@@ -24,6 +25,7 @@ import {
 export class TrzszTransfer {
   private buffer: TrzszBuffer = new TrzszBuffer();
   private writer: (data: string | Uint8Array) => void;
+  private isWindowsShell: boolean;
   private lastInputTime: number = 0;
   private openedFiles: TrzszFile[] = [];
   private tmuxOutputJunk: boolean = false;
@@ -31,9 +33,11 @@ export class TrzszTransfer {
   private transferConfig: any = {};
   private stopped: boolean = false;
   private maxChunkTimeInMilliseconds: number = 0;
+  private protocolNewline: string = "\n";
 
-  public constructor(writer: (data: string | Uint8Array) => void) {
+  public constructor(writer: (data: string | Uint8Array) => void, isWindowsShell: boolean = false) {
     this.writer = writer;
+    this.isWindowsShell = isWindowsShell;
   }
 
   public cleanup() {
@@ -71,7 +75,7 @@ export class TrzszTransfer {
   }
 
   private async sendLine(typ: string, buf: string) {
-    this.writer(`#${typ}:${buf}\n`);
+    this.writer(`#${typ}:${buf}${this.protocolNewline}`);
   }
 
   private async recvLine(expectType: string, mayHasJunk: boolean = false) {
@@ -79,17 +83,28 @@ export class TrzszTransfer {
       throw new TrzszError("Stopped");
     }
 
+    if (this.isWindowsShell) {
+      let line = await this.buffer.readLineOnWindows();
+      if (this.tmuxOutputJunk || mayHasJunk) {
+        const idx = line.lastIndexOf("#" + expectType + ":");
+        if (idx >= 0) {
+          line = line.substring(idx);
+        }
+      }
+      return line;
+    }
+
     let line = await this.buffer.readLine();
 
     if (this.tmuxOutputJunk || mayHasJunk) {
       if (line.length > 0) {
         while (line[line.length - 1] === "\r") {
-          line += await this.buffer.readLine();
+          line = line.substring(0, line.length - 1) + (await this.buffer.readLine());
         }
       }
-      const flag = "#" + expectType + ":";
-      if (line.includes(flag)) {
-        line = line.substring(line.lastIndexOf(flag));
+      const idx = line.lastIndexOf("#" + expectType + ":");
+      if (idx >= 0) {
+        line = line.substring(idx);
       }
     }
 
@@ -193,8 +208,20 @@ export class TrzszTransfer {
     ]);
   }
 
-  public async sendAction(confirm: boolean) {
-    const action = { lang: "js", confirm: confirm, version: trzszVersion };
+  public async sendAction(confirm: boolean, remoteIsWindows: boolean) {
+    const action: any = {
+      lang: "js",
+      confirm: confirm,
+      version: trzszVersion,
+      support_dir: !isRunningInBrowser,
+    };
+    if (this.isWindowsShell) {
+      action.binary = false;
+      action.newline = "!\n";
+    }
+    if (remoteIsWindows) {
+      this.protocolNewline = "!\n";
+    }
     await this.sendString("ACT", JSON.stringify(action));
   }
 
@@ -205,7 +232,11 @@ export class TrzszTransfer {
 
   public async sendConfig() {
     this.transferConfig = { lang: "js" };
-    await this.sendString("CFG", JSON.stringify(this.transferConfig));
+    let jsonStr = JSON.stringify(this.transferConfig);
+    jsonStr = jsonStr.replace(/[\u007F-\uFFFF]/g, function (chr) {
+      return "\\u" + ("0000" + chr.charCodeAt(0).toString(16)).substr(-4);
+    });
+    await this.sendString("CFG", jsonStr);
   }
 
   public async recvConfig() {
@@ -215,9 +246,14 @@ export class TrzszTransfer {
     return this.transferConfig;
   }
 
-  public async handleClientError(err: Error) {
+  public async clientExit(msg: string) {
+    await this.sendString("EXIT", msg);
+  }
+
+  public async clientError(err: Error) {
     await this.cleanInput(this.cleanTimeoutInMilliseconds);
 
+    const errMsg = TrzszError.getErrorMessage(err);
     let trace = true;
     if (err instanceof TrzszError) {
       trace = err.isTraceBack();
@@ -226,22 +262,16 @@ export class TrzszTransfer {
       }
       if (err.isRemoteFail()) {
         if (trace) {
-          console.log(TrzszError.getErrorMessage(err));
+          console.log(errMsg);
         }
         return;
       }
     }
 
-    const errMsg = TrzszError.getErrorMessage(err);
     await this.sendString(trace ? "FAIL" : "fail", errMsg);
     if (trace) {
       console.log(errMsg);
     }
-  }
-
-  public async sendExit(msg: string) {
-    await this.cleanInput(200);
-    await this.sendString("EXIT", msg);
   }
 
   public async sendFiles(files: TrzszFileReader[], progressCallback: ProgressCallback) {
@@ -289,7 +319,7 @@ export class TrzszTransfer {
           progressCallback.onStep(step);
         }
         const chunkTime = Date.now() - beginTime;
-        if (chunkTime < 1000 && bufSize < maxBufSize) {
+        if (data.length == bufSize && chunkTime < 500 && bufSize < maxBufSize) {
           bufSize = Math.min(bufSize * 2, maxBufSize);
           buffer = new ArrayBuffer(bufSize);
         }

@@ -23,13 +23,13 @@ export class BufferSizeParser extends argparse.Action {
   }
 
   static parseSize(value) {
-    const match = /^(\d+)(k|m|g|kb|mb|gb)?$/i.exec(value);
+    const match = /^(\d+)(b|k|m|g|kb|mb|gb)?$/i.exec(value);
     if (!match) {
-      throw new TypeError("invalid size");
+      throw new TypeError(`invalid size ${value}`);
     }
     const sizeValue = parseInt(match[1]);
     const unitSuffix = match[2]?.toLowerCase();
-    if (!unitSuffix) {
+    if (!unitSuffix || unitSuffix == "b") {
       return sizeValue;
     }
     if (unitSuffix == "k" || unitSuffix == "kb") {
@@ -41,7 +41,7 @@ export class BufferSizeParser extends argparse.Action {
     if (unitSuffix == "g" || unitSuffix == "gb") {
       return sizeValue * 1024 * 1024 * 1024;
     }
-    throw new TypeError("invalid size");
+    throw new TypeError(`invalid size ${value}`);
   }
 
   call(parser, namespace, values /* , option_string = undefined */) {

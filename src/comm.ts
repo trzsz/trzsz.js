@@ -14,6 +14,17 @@ export const trzszVersion = "[VersionInject]{version}[/VersionInject]";
 
 /* eslint-disable require-jsdoc */
 
+export const isRunningInBrowser = (function () {
+  try {
+    if (require.resolve("fs") === "fs") {
+      require("fs");
+      return false;
+    }
+  } catch (err) {
+    return true;
+  }
+})();
+
 export function strToUint8(str: string): Uint8Array {
   return Uint8Array.from(str, (v) => v.charCodeAt(0));
 }
@@ -68,7 +79,7 @@ export class TrzszError extends Error {
   }
 
   public isTraceBack() {
-    if (this.type === "fail") {
+    if (this.type === "fail" || this.type === "EXIT") {
       return false;
     }
     return this.trace;

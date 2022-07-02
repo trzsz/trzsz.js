@@ -116,3 +116,23 @@ test("stop while reading", async () => {
   setTimeout(() => tb.stopBuffer(), 100);
   await expect(tb.readLine()).rejects.toThrowError("Stopped");
 });
+
+test("drain buffer", async () => {
+  const tb = new TrzszBuffer();
+  tb.addBuffer("old message\n");
+  tb.drainBuffer();
+  tb.addBuffer("new message\n");
+  expect(await tb.readLine()).toBe("new message");
+});
+
+test("read line on windows", async () => {
+  const tb = new TrzszBuffer();
+  tb.addBuffer("#DATA:test message\t1+/=!");
+  expect(await tb.readLineOnWindows()).toBe("#DATA:testmessage1+/=");
+  tb.addBuffer("\x1b[01;32mABC\x1b[01;34mdef!\x1b[00m");
+  expect(await tb.readLineOnWindows()).toBe("ABCdef");
+  tb.addBuffer("\x1b[29CAAA\x1b[KBBB" + "C".repeat(200) + "!");
+  expect(await tb.readLineOnWindows()).toBe("AAABBB" + "C".repeat(200));
+  tb.addBuffer("test\x03message");
+  await expect(tb.readLineOnWindows()).rejects.toThrowError("Interrupted");
+});

@@ -24,7 +24,7 @@ app.post("/shell/create", (req, res) => {
   const cmd = os.platform() === "win32" ? "powershell.exe" : "bash";
   shellArr[id] = pty.spawn(cmd, [], { name: "xterm-color", encoding: null });
 
-  res.json({ id: id });
+  res.json({ id: id, is_win: os.platform() === "win32" });
 });
 
 app.post("/shell/resize/:id", (req, res) => {

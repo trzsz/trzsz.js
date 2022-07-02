@@ -9,6 +9,7 @@
 const os = require("os");
 const fs = require("fs");
 const path = require("path");
+import * as comm from "../src/comm";
 import * as browser from "../src/browser";
 import { findTrzszMagicKey, TrzszFilter } from "../src/filter";
 import { strToUint8, strToArrBuf, uint8ToStr, decodeBuffer } from "../src/comm";
@@ -19,8 +20,9 @@ async function sleep(timeout) {
   return new Promise((resolve) => setTimeout(resolve, timeout));
 }
 
-beforeEach(() => {
-  jest.resetModules();
+afterEach(() => {
+  // @ts-ignore
+  comm.isRunningInBrowser = false;
 });
 
 let tmpDir: string;
@@ -33,57 +35,34 @@ afterAll(() => {
   fs.rmSync(tmpDir, { recursive: true });
 });
 
-test("find trzsz magic key from string", async () => {
-  expect(await findTrzszMagicKey(null)).toBe(null);
-  expect(await findTrzszMagicKey("abc")).toBe(null);
-  expect(await findTrzszMagicKey("abc::")).toBe(null);
-  expect(await findTrzszMagicKey("::TRZSZ:TRANSFER:1")).toBe("::TRZSZ:TRANSFER:1");
-  expect(await findTrzszMagicKey("abc::TRZSZ:TRANSFER:1")).toBe("::TRZSZ:TRANSFER:1");
-  expect(await findTrzszMagicKey("a:bc::TRZSZ:TRANSFER:1")).toBe("::TRZSZ:TRANSFER:1");
-  expect(await findTrzszMagicKey("a:b:c::TRZSZ:TRANSFER:1")).toBe("::TRZSZ:TRANSFER:1");
-  expect(await findTrzszMagicKey("a:b:c:::::::TRZSZ:TRANSFER:1")).toBe("::TRZSZ:TRANSFER:1");
-});
+test("find trzsz magic key", async () => {
+  async function testFindTrzszMagicKey(output: string | null, result: string | null) {
+    expect(await findTrzszMagicKey(output)).toBe(result);
+    if (output == null) {
+      return;
+    }
+    expect(await findTrzszMagicKey(strToUint8(output))).toBe(result);
+    expect(await findTrzszMagicKey(strToArrBuf(output))).toBe(result);
+    expect(await findTrzszMagicKey(new Blob([output]))).toBe(result);
+  }
+  await testFindTrzszMagicKey(null, null);
+  await testFindTrzszMagicKey("ABC", null);
+  await testFindTrzszMagicKey("A::".repeat(10), null);
+  const good = "::TRZSZ:TRANSFER";
+  const fail = "::TRZSZ:TRANSFEX";
+  const suffix = ":X:1.0.0:0";
+  await testFindTrzszMagicKey(`${fail}${suffix}`, null);
+  await testFindTrzszMagicKey(`${good}${suffix}`, `${good}${suffix}`);
+  await testFindTrzszMagicKey(`A:A${fail}${suffix}`, null);
+  await testFindTrzszMagicKey(`A:A${good}${suffix}`, `${good}${suffix}`);
+  await testFindTrzszMagicKey(`:::${fail}${suffix}`, null);
+  await testFindTrzszMagicKey(`:::${good}${suffix}`, `${good}${suffix}`);
 
-test("find trzsz magic key from Uint8Array", async () => {
-  expect(await findTrzszMagicKey(strToUint8("abc"))).toBe(null);
-  expect(await findTrzszMagicKey(strToUint8("abc::"))).toBe(null);
-  expect(await findTrzszMagicKey(strToUint8("abc::TRZSZ:TRANSFEX"))).toBe(null);
-  expect(await findTrzszMagicKey(strToUint8("abc::XRZSZ:TRANSFER"))).toBe(null);
-  expect(await findTrzszMagicKey(strToUint8("::TRZSZ:TRANSFER"))).toBe("::TRZSZ:TRANSFER");
-  expect(await findTrzszMagicKey(strToUint8("abc::TRZSZ:TRANSFER"))).toBe("::TRZSZ:TRANSFER");
-  expect(await findTrzszMagicKey(strToUint8("abc::TRZSZ:TRANSFER:1"))).toBe("::TRZSZ:TRANSFER:1");
-  expect(await findTrzszMagicKey(strToUint8("a:bc::TRZSZ:TRANSFER:1"))).toBe("::TRZSZ:TRANSFER:1");
-  expect(await findTrzszMagicKey(strToUint8("a:b:c::TRZSZ:TRANSFER:1"))).toBe("::TRZSZ:TRANSFER:1");
-  expect(await findTrzszMagicKey(strToUint8("a:b:c:::::::TRZSZ:TRANSFER:1"))).toBe("::TRZSZ:TRANSFER:1");
-
-  const arrBuf = strToUint8("abc::TRZSZ:TRANSFER:1::ABC::TRZSZ:TRANSFEX").buffer;
+  const arrBuf = strToUint8(`AAA${good}${suffix}`).buffer;
+  expect(await findTrzszMagicKey(new Uint8Array(arrBuf, 3))).toBe(`${good}${suffix}`);
   expect(await findTrzszMagicKey(new Uint8Array(arrBuf, 23))).toBe(null);
-});
 
-test("find trzsz magic key from array buffer", async () => {
-  expect(await findTrzszMagicKey(strToArrBuf("abc"))).toBe(null);
-  expect(await findTrzszMagicKey(strToArrBuf("abc::"))).toBe(null);
-  expect(await findTrzszMagicKey(strToArrBuf("abc::TRZSZ:TRANSFEX"))).toBe(null);
-  expect(await findTrzszMagicKey(strToArrBuf("abc::XRZSZ:TRANSFER"))).toBe(null);
-  expect(await findTrzszMagicKey(strToArrBuf("::TRZSZ:TRANSFER"))).toBe("::TRZSZ:TRANSFER");
-  expect(await findTrzszMagicKey(strToArrBuf("abc::TRZSZ:TRANSFER"))).toBe("::TRZSZ:TRANSFER");
-  expect(await findTrzszMagicKey(strToArrBuf("abc::TRZSZ:TRANSFER:1"))).toBe("::TRZSZ:TRANSFER:1");
-  expect(await findTrzszMagicKey(strToArrBuf("a:bc::TRZSZ:TRANSFER:1"))).toBe("::TRZSZ:TRANSFER:1");
-  expect(await findTrzszMagicKey(strToArrBuf("a:b:c::TRZSZ:TRANSFER:1"))).toBe("::TRZSZ:TRANSFER:1");
-  expect(await findTrzszMagicKey(strToArrBuf("a:b:c:::::::TRZSZ:TRANSFER:1"))).toBe("::TRZSZ:TRANSFER:1");
-});
-
-test("find trzsz magic key from blob", async () => {
-  expect(await findTrzszMagicKey(new Blob(["abc"]))).toBe(null);
-  expect(await findTrzszMagicKey(new Blob(["abc::"]))).toBe(null);
-  expect(await findTrzszMagicKey(new Blob(["abc::TRZSZ:TRANSFEX"]))).toBe(null);
-  expect(await findTrzszMagicKey(new Blob(["abc::XRZSZ:TRANSFER"]))).toBe(null);
-  expect(await findTrzszMagicKey(new Blob(["::TRZSZ:TRANSFER"]))).toBe("::TRZSZ:TRANSFER");
-  expect(await findTrzszMagicKey(new Blob(["abc::TRZSZ:TRANSFER"]))).toBe("::TRZSZ:TRANSFER");
-  expect(await findTrzszMagicKey(new Blob(["abc::TRZSZ:TRANSFER:1"]))).toBe("::TRZSZ:TRANSFER:1");
-  expect(await findTrzszMagicKey(new Blob(["a:bc::TRZSZ:TRANSFER:1"]))).toBe("::TRZSZ:TRANSFER:1");
-  expect(await findTrzszMagicKey(new Blob(["a:b:c::TRZSZ:TRANSFER:1"]))).toBe("::TRZSZ:TRANSFER:1");
-  expect(await findTrzszMagicKey(new Blob(["a:b:c:::::::TRZSZ:TRANSFER:1"]))).toBe("::TRZSZ:TRANSFER:1");
+  await testFindTrzszMagicKey(`:::${good}${suffix}:::${good}${suffix}1`, `${good}${suffix}1`);
 });
 
 test("default trzsz options for filter", () => {
@@ -328,9 +307,8 @@ test("cancel download files", async () => {
 });
 
 test("trz upload files in browser", async () => {
-  jest.doMock("fs", () => {
-    throw new Error("no require in browser");
-  });
+  // @ts-ignore
+  comm.isRunningInBrowser = true;
   const selectSendFiles = jest.spyOn(browser, "selectSendFiles");
 
   const writeToTerminal = jest.fn();
@@ -392,9 +370,8 @@ test("trz upload files in browser", async () => {
 });
 
 test("tsz download files in browser", async () => {
-  jest.doMock("fs", () => {
-    throw new Error("no require in browser");
-  });
+  // @ts-ignore
+  comm.isRunningInBrowser = true;
   const openSaveFile = jest.spyOn(browser, "openSaveFile");
 
   const writeToTerminal = jest.fn();
@@ -457,9 +434,8 @@ test("tsz download files in browser", async () => {
 });
 
 test("require user permission in browser", async () => {
-  jest.doMock("fs", () => {
-    throw new Error("no require in browser");
-  });
+  // @ts-ignore
+  comm.isRunningInBrowser = true;
 
   const writeToTerminal = jest.fn();
   const sendToServer = jest.fn();

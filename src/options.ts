@@ -23,10 +23,11 @@ export interface TrzszOptions {
   /**
    * Choose some files to be sent to the server.
    * No need for webshell or which running in a browser.
+   * @param {boolean} directory - choose directories and files, or just files.
    * @return {Promise<string[] | undefined>} The file paths array to be sent.
    *                                         undefined means the user has cancelled.
    */
-  chooseSendFiles?: () => Promise<string[] | undefined>;
+  chooseSendFiles?: (directory?: boolean) => Promise<string[] | undefined>;
 
   /**
    * Choose a directory to save the received files.
@@ -48,4 +49,9 @@ export interface TrzszOptions {
    * The columns of terminal.
    */
   terminalColumns?: number;
+
+  /**
+   * Is there a windows shell? Such as `cmd` and `PowerShell`.
+   */
+  isWindowsShell?: boolean;
 }

@@ -4,6 +4,7 @@
  * @license MIT
  */
 
+const nodePty = require("node-pty");
 const { app, BrowserWindow, dialog, ipcMain } = require("electron");
 
 const createWindow = () => {
@@ -20,13 +21,22 @@ const createWindow = () => {
     },
   });
 
+  mainWindow.loadFile("index.html");
+
+  // node-pty handler
+  ipcMain.on("pty:spawn", (event, ...args) => {
+    const pty = nodePty.spawn(...args);
+    pty.on("exit", (_code, _sig) => process.exit(_code));
+    pty.on("data", (data) => mainWindow.webContents.send("pty:ondata", data));
+    ipcMain.on("pty:write", (_event, data) => pty.write(Buffer.from(data)));
+    ipcMain.on("pty:resize", (_event, columns, rows) => pty.resize(columns, rows));
+  });
+
   // display native system dialog for opening and saving files.
   ipcMain.handle("show-open-dialog-sync", async (event, ...args) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     return dialog.showOpenDialogSync(win, ...args);
   });
-
-  mainWindow.loadFile("index.html");
 
   if (process.env.DEBUG) {
     mainWindow.openDevTools();
@@ -47,5 +57,3 @@ app.on("window-all-closed", () => {
     app.quit();
   }
 });
-
-app.allowRendererProcessReuse = false;

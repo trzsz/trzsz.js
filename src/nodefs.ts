@@ -172,7 +172,7 @@ export async function openSaveFile(savePath: string, fileName: string, overwrite
   } catch (err) {
     if (err.errno === -13) {
       throw new TrzszError(`No permission to write: ${filePath}`);
-    } else if (err.errno === -21) {
+    } else if (err.errno === -21 || err.errno === -4068) {
       throw new TrzszError(`Is a directory: ${filePath}`);
     }
     throw err;

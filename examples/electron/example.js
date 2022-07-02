@@ -17,7 +17,7 @@ InitElectronExapmle = (terminal) => {
   fit.fit();
 
   const cmd = window.platform === "win32" ? "powershell.exe" : "bash";
-  const pty = window.pty.spawn(cmd, [], {
+  const pty = window.spawnPTY(cmd, [], {
     name: "xterm-color",
     cols: term.cols,
     rows: term.rows,
@@ -30,7 +30,9 @@ InitElectronExapmle = (terminal) => {
     // send the user input to the server
     (input) => pty.write(input),
     // the terminal columns
-    term.cols
+    term.cols,
+    // there is a windows shell
+    window.platform === "win32"
   );
 
   // let trzsz process the server output

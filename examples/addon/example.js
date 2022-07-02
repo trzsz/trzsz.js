@@ -16,7 +16,7 @@ InitAddonExample = (terminal) => {
       const id = data.id;
       const ws = new WebSocket(`ws://${location.host}/shell/ws/${id}`);
 
-      const trzsz = new TrzszAddon(ws);
+      const trzsz = new TrzszAddon(ws, { isWindowsShell: data.is_win });
       const fit = new FitAddon.FitAddon();
 
       const term = new Terminal();

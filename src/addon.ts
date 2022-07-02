@@ -23,7 +23,7 @@ export class TrzszAddon implements ITerminalAddon {
    */
   constructor(socket: WebSocket, options?: TrzszOptions) {
     this.socket = socket;
-    this.options = options ? options : {};
+    this.options = options || {};
     // always set binary type to arraybuffer
     this.socket.binaryType = "arraybuffer";
   }
@@ -49,6 +49,7 @@ export class TrzszAddon implements ITerminalAddon {
       chooseSaveDirectory: this.options.chooseSaveDirectory,
       requireUserPermission: this.options.requireUserPermission,
       terminalColumns: terminal.cols,
+      isWindowsShell: this.options.isWindowsShell,
     });
 
     this.disposables.push(this.addSocketListener(this.socket, "message", (ev) => trzsz.processServerOutput(ev.data)));

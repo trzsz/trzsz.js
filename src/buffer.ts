@@ -8,6 +8,38 @@
 
 import { strToUint8, uint8ToStr, TrzszError } from "./comm";
 
+function isVT100End(c: number): boolean {
+  if (0x61 <= c && c <= 0x7a) {
+    // 'a' <= c && c <= 'z'
+    return true;
+  }
+  if (0x41 <= c && c <= 0x5a) {
+    // 'A' <= c && c <= 'Z'
+    return true;
+  }
+  return false;
+}
+
+function isTrzszLetter(c: number): boolean {
+  if (0x61 <= c && c <= 0x7a) {
+    // 'a' <= c && c <= 'z'
+    return true;
+  }
+  if (0x41 <= c && c <= 0x5a) {
+    // 'A' <= c && c <= 'Z'
+    return true;
+  }
+  if (0x30 <= c && c <= 0x39) {
+    // '0' <= c && c <= '9'
+    return true;
+  }
+  if (c == 0x23 || c == 0x3A || c == 0x2B || c == 0x2F || c == 0x3D) {
+    // c == '#' || c == ':' || c == '+' || c == '/' || c == '='
+    return true;
+  }
+  return false;
+}
+
 export class TrzszBuffer {
   private bufArray: (string | ArrayBuffer | Uint8Array | Blob | null)[] = [];
   private resolve: Function | null = null;
@@ -78,14 +110,16 @@ export class TrzszBuffer {
     return this.nextBuf;
   }
 
+  private growBuffer(dst: Uint8Array, idx: number, min: number) {
+    const len = Math.max(dst.length * 2, idx + min);
+    this.arrBuf = new ArrayBuffer(len);
+    const buf = new Uint8Array(this.arrBuf);
+    buf.set(dst.subarray(0, idx));
+    return buf;
+  }
+
   private appendBuffer(dst: Uint8Array, idx: number, src: Uint8Array) {
-    let buf = dst;
-    if (dst.length < idx + src.length) {
-      const len = Math.max(dst.length * 2, idx + src.length);
-      this.arrBuf = new ArrayBuffer(len);
-      buf = new Uint8Array(this.arrBuf);
-      buf.set(dst.subarray(0, idx));
-    }
+    const buf = dst.length >= idx + src.length ? dst : this.growBuffer(dst, idx, src.length);
     buf.set(src, idx);
     return buf;
   }
@@ -95,7 +129,7 @@ export class TrzszBuffer {
     let len = 0;
     while (true) {
       let next = await this.nextBuffer();
-      const newLineIdx = next.indexOf(0x0a);
+      const newLineIdx = next.indexOf(0x0a); // '\n'
       if (newLineIdx >= 0) {
         this.nextIdx += newLineIdx + 1; // +1 to ignroe the '\n'
         next = next.subarray(0, newLineIdx);
@@ -133,5 +167,43 @@ export class TrzszBuffer {
       idx += next.length;
     }
     return buf;
+  }
+
+  public async readLineOnWindows() {
+    let buf = new Uint8Array(this.arrBuf);
+    let skipVT100 = false;
+    let idx = 0;
+    while (true) {
+      let next = await this.nextBuffer();
+      const newLineIdx = next.indexOf(0x21); // '!'
+      if (newLineIdx >= 0) {
+        this.nextIdx += newLineIdx + 1; // +1 to ignroe the '\n'
+        next = next.subarray(0, newLineIdx);
+      } else {
+        this.nextIdx += next.length;
+      }
+      for (let i = 0; i < next.length; i++) {
+        const c = next[i];
+        if (c == 0x03) {
+          // `ctrl + c` to interrupt
+          throw new TrzszError("Interrupted");
+        }
+        if (skipVT100) {
+          if (isVT100End(c)) {
+            skipVT100 = false;
+          }
+        } else if (c == 0x1b) {
+          skipVT100 = true;
+        } else if (isTrzszLetter(c)) {
+          if (idx >= buf.length) {
+            buf = this.growBuffer(buf, idx, next.length);
+          }
+          buf[idx++] = c;
+        }
+      }
+      if (newLineIdx >= 0) {
+        return uint8ToStr(buf.subarray(0, idx));
+      }
+    }
   }
 }

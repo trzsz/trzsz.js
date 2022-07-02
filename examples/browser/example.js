@@ -9,7 +9,7 @@
  * @function
  * @param {object} terminal - the div element for xterm
  */
-InitBrowserExample = (terminal) => {
+InitBrowserExample = async (terminal) => {
   const term = new Terminal();
   const fit = new FitAddon.FitAddon();
   term.loadAddon(fit);
@@ -33,6 +33,8 @@ InitBrowserExample = (terminal) => {
     },
     // the terminal columns
     terminalColumns: term.cols,
+    // there is a windows shell
+    isWindowsShell: (await fetch("/is_win")).json(),
   });
 
   // let trzsz process the server output

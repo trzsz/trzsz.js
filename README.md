@@ -84,14 +84,24 @@ In this case, `lrzsz` ( rz / sz ) is convenient to use, but unfortunately it's n
   terminal.onResize((size) => trzszFilter.setTerminalColumns(size.cols));
   ```
 
+* If there is a windows shell, such as `cmd` and `PowerShell`.
+  ```js
+  const trzszFilter = new TrzszFilter({
+    // There is a windows shell
+    isWindowsShell: true,
+  });
+  ```
+
 * If running in `Node.js` and `TrzszFilter` can `require('fs')`, `chooseSendFiles` and `chooseSaveDirectory` are required. If running in web browser, they will be ignored. Note that they are `async` functions.
   ```js
   const trzszFilter = new TrzszFilter({
     // call on the user runs trz ( upload files ) on the server and no error on require('fs').
-    chooseSendFiles: async () => {
+    chooseSendFiles: async (directory) => {
+      // if `directory` is `true`, allow to choose multiple directories and files.
+      // otherwise, only allow to choose multiple files.
       // return `undefined` if the user cancels.
       // return an array of file paths choosed by the user.
-      return ["/path/to/file1", "/path/to/file2"];
+      return ["/path/to/file1", "/path/to/file2", "/path/to/directory3"];
     },
     // call on the user runs tsz ( download files ) on the server and no error on require('fs').
     chooseSaveDirectory: async () => {

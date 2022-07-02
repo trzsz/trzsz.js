@@ -14,6 +14,10 @@ require("express-ws")(app);
 
 app.use(express.static("."));
 
+app.get("/is_win", function (req, res) {
+  res.send(os.platform() === "win32");
+});
+
 app.ws("/ws/shell", function (ws, req) {
   console.log("create shell");
 

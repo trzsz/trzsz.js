@@ -4,6 +4,7 @@
  * @license MIT
  */
 
+import * as comm from "../src/comm";
 import * as browser from "../src/browser";
 import { strToUint8 } from "../src/comm";
 import { TrzszAddon } from "../src/addon";
@@ -14,8 +15,9 @@ async function sleep(timeout) {
   return new Promise((resolve) => setTimeout(resolve, timeout));
 }
 
-beforeEach(() => {
-  jest.resetModules();
+afterEach(() => {
+  // @ts-ignore
+  comm.isRunningInBrowser = false;
 });
 
 class MockTerminal {
@@ -57,9 +59,8 @@ class MockWebSocket {
 }
 
 test("trz upload files using addon", async () => {
-  jest.doMock("fs", () => {
-    throw new Error("no require in browser");
-  });
+  // @ts-ignore
+  comm.isRunningInBrowser = true;
   const selectSendFiles = jest.spyOn(browser, "selectSendFiles");
   selectSendFiles.mockResolvedValueOnce([
     {
@@ -128,9 +129,8 @@ test("trz upload files using addon", async () => {
 });
 
 test("tsz download files using addon", async () => {
-  jest.doMock("fs", () => {
-    throw new Error("no require in browser");
-  });
+  // @ts-ignore
+  comm.isRunningInBrowser = true;
   const openSaveFile = jest.spyOn(browser, "openSaveFile");
   const file = {
     closeFile: jest.fn(),

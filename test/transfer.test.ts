@@ -414,10 +414,7 @@ test("clean input and exit", async () => {
   trzsz.addReceivedData("input1");
   setTimeout(() => trzsz.addReceivedData("input2"), 100);
 
-  const now = Date.now();
-  await trzsz.sendExit("exit message");
-
-  expect(Date.now() - now).toBeGreaterThanOrEqual(300);
+  await trzsz.clientExit("exit message");
   expect(writer.mock.calls.length).toBe(1);
   expect(writer.mock.calls[0][0]).toBe("#EXIT:eJxLrcgsUchNLS5OTE8FAB7YBMA=\n");
 });
@@ -429,7 +426,7 @@ test("handle remote exit error", async () => {
   const now = Date.now();
   trzsz.addReceivedData("input");
   const err = new TrzszError("message", "EXIT");
-  await trzsz.handleClientError(err);
+  await trzsz.clientError(err);
 
   expect(Date.now() - now).toBeGreaterThanOrEqual(100);
   expect(writer.mock.calls.length).toBe(0);
@@ -443,7 +440,7 @@ test("handle remote fail error with trace", async () => {
   const now = Date.now();
   trzsz.addReceivedData("input");
   const err = new TrzszError("eJxLLSrKLwIABmwCKw==", "FAIL", true);
-  await trzsz.handleClientError(err);
+  await trzsz.clientError(err);
 
   expect(Date.now() - now).toBeGreaterThanOrEqual(100);
   expect(writer.mock.calls.length).toBe(0);
@@ -461,7 +458,7 @@ test("handle remote fail error without trace", async () => {
   const now = Date.now();
   trzsz.addReceivedData("input");
   const err = new TrzszError("eJxLLSrKLwIABmwCKw==", "fail", true);
-  await trzsz.handleClientError(err);
+  await trzsz.clientError(err);
 
   expect(Date.now() - now).toBeGreaterThanOrEqual(100);
   expect(writer.mock.calls.length).toBe(0);
@@ -477,7 +474,7 @@ test("handle local error without trace", async () => {
   const now = Date.now();
   trzsz.addReceivedData("input");
   const err = new TrzszError("local error");
-  await trzsz.handleClientError(err);
+  await trzsz.clientError(err);
 
   expect(Date.now() - now).toBeGreaterThanOrEqual(100);
   expect(writer.mock.calls.length).toBe(1);
@@ -494,7 +491,7 @@ test("handle local error with trace", async () => {
   const now = Date.now();
   trzsz.addReceivedData("input");
   const err = new TrzszError("local error", null, true);
-  await trzsz.handleClientError(err);
+  await trzsz.clientError(err);
 
   expect(Date.now() - now).toBeGreaterThanOrEqual(100);
   expect(writer.mock.calls.length).toBe(1);
@@ -509,11 +506,11 @@ test("send action confirm or cancel", async () => {
   const writer = jest.fn();
   const trzsz = new TrzszTransfer(writer);
 
-  await trzsz.sendAction(true);
+  await trzsz.sendAction(true, false);
   expect(writer.mock.calls.length).toBe(1);
   expect(writer.mock.calls[0][0]).toContain("#ACT:");
 
-  await trzsz.sendAction(false);
+  await trzsz.sendAction(false, false);
   expect(writer.mock.calls.length).toBe(2);
   expect(writer.mock.calls[1][0]).toContain("#ACT:");
 });
@@ -591,7 +588,7 @@ test("stop transferring and close files", async () => {
   };
   await expect(trzsz.sendFiles([file, file, file], null)).rejects.toThrowError("Stopped");
 
-  await trzsz.handleClientError(new TrzszError("Stopped"));
+  await trzsz.clientError(new TrzszError("Stopped"));
   expect(Date.now() - now).toBeGreaterThanOrEqual(500);
 
   trzsz.cleanup();

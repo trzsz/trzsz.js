@@ -56,12 +56,14 @@ test("check files readable", () => {
   expect(() => checkFilesReadable([tmpDir])).toThrowError("Is a directory");
   expect(() => checkFilesReadable([tmpFile, tmpDir])).toThrowError("Is a directory");
 
-  expect(() => checkFilesReadable(["/dev/stdin"])).toThrowError("Not a regular file");
-  expect(() => checkFilesReadable([tmpFile, "/dev/stdin"])).toThrowError("Not a regular file");
+  if (process.platform !== "win32") {
+    expect(() => checkFilesReadable(["/dev/stdin"])).toThrowError("Not a regular file");
+    expect(() => checkFilesReadable([tmpFile, "/dev/stdin"])).toThrowError("Not a regular file");
 
-  fs.chmodSync(tmpFile, 0o222);
-  expect(() => checkFilesReadable([tmpFile])).toThrowError("No permission to read");
-  fs.chmodSync(tmpFile, 0o444);
+    fs.chmodSync(tmpFile, 0o222);
+    expect(() => checkFilesReadable([tmpFile])).toThrowError("No permission to read");
+    fs.chmodSync(tmpFile, 0o444);
+  }
 });
 
 test("check path writable", () => {
@@ -74,9 +76,11 @@ test("check path writable", () => {
   expect(() => checkPathWritable(notExistFile)).toThrowError("No such directory");
   expect(() => checkPathWritable(tmpFile)).toThrowError("Not a directory");
 
-  fs.chmodSync(tmpDir, 0o444);
-  expect(() => checkPathWritable(tmpDir)).toThrowError("No permission to write");
-  fs.chmodSync(tmpDir, 0o777);
+  if (process.platform !== "win32") {
+    fs.chmodSync(tmpDir, 0o444);
+    expect(() => checkPathWritable(tmpDir)).toThrowError("No permission to write");
+    fs.chmodSync(tmpDir, 0o777);
+  }
 });
 
 test("open send files", async () => {
@@ -138,9 +142,11 @@ test("open save file", async () => {
 });
 
 test("open save file error", async () => {
-  fs.chmodSync(tmpDir, 0o444);
-  await expect(openSaveFile(tmpDir, "error.txt", false)).rejects.toThrowError("No permission to write");
-  fs.chmodSync(tmpDir, 0o777);
+  if (process.platform !== "win32") {
+    fs.chmodSync(tmpDir, 0o444);
+    await expect(openSaveFile(tmpDir, "error.txt", false)).rejects.toThrowError("No permission to write");
+    fs.chmodSync(tmpDir, 0o777);
+  }
 
   fs.mkdirSync(path.join(tmpDir, "isdir"));
   await expect(openSaveFile(tmpDir, "isdir", true)).rejects.toThrowError("Is a directory");

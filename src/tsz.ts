@@ -26,6 +26,7 @@ function main() {
     help: "binary transfer mode, faster for binary files",
   });
   parser.add_argument("-e", "--escape", { action: "store_true", help: "escape all known control characters" });
+  parser.add_argument("-d", "--directory", { action: "store_true", help: "transfer directories and files" });
   parser.add_argument("-B", "--bufsize", {
     min_size: "1K",
     max_size: "1G",
@@ -36,9 +37,9 @@ function main() {
   });
   parser.add_argument("-t", "--timeout", {
     type: "int",
-    default: 100,
+    default: 10,
     metavar: "N",
-    help: "timeout ( N seconds ) for each buffer chunk.\nN <= 0 means never timeout. (default: 100)",
+    help: "timeout ( N seconds ) for each buffer chunk.\nN <= 0 means never timeout. (default: 10)",
   });
   parser.add_argument("file", { nargs: "+", help: "file(s) to be sent" });
 
@@ -48,3 +49,23 @@ function main() {
 }
 
 main();
+
+// redirect to the python version
+console.log(
+  "\nThe Node.js version is under development.\n" +
+    "Please use the Python version instead.\n" +
+    "GitHub: https://github.com/trzsz/trzsz\n"
+);
+
+const bin = "/usr/local/bin/tsz";
+const fs = require("fs");
+if (!fs.existsSync(bin)) {
+  process.exit();
+}
+const script = fs.readFileSync(bin, "utf-8");
+if (script.startsWith("#!/usr/bin/env node")) {
+  process.exit();
+}
+
+const { spawnSync } = require("child_process");
+spawnSync(bin, process.argv.slice(2), { stdio: "inherit" });
