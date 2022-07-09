@@ -64,8 +64,14 @@ test("trz upload files using addon", async () => {
   const selectSendFiles = jest.spyOn(browser, "selectSendFiles");
   selectSendFiles.mockResolvedValueOnce([
     {
-      getName: () => {
-        return "test.txt";
+      getPathId: () => {
+        return 0;
+      },
+      getRelPath: () => {
+        return ["test.txt"];
+      },
+      isDir: () => {
+        return false;
       },
       getSize: () => {
         return 13;
@@ -134,10 +140,12 @@ test("tsz download files using addon", async () => {
   const openSaveFile = jest.spyOn(browser, "openSaveFile");
   const file = {
     closeFile: jest.fn(),
-    getName: jest.fn(),
+    getLocalName: jest.fn(),
     writeFile: jest.fn(),
+    getFileName: () => "test.txt",
+    isDir: () => false,
   };
-  file.getName.mockReturnValueOnce("test.txt.0");
+  file.getLocalName.mockReturnValueOnce("test.txt.0");
   openSaveFile.mockResolvedValueOnce(file as any);
 
   const ws = new MockWebSocket();
@@ -170,6 +178,7 @@ test("tsz download files using addon", async () => {
 
   await sleep(500);
   expect(openSaveFile.mock.calls.length).toBe(1);
+  expect(openSaveFile.mock.calls[0][1]).toBe("test.txt");
 
   expect(ws.send.mock.calls.length).toBe(7);
   expect(ws.send.mock.calls[0][0]).toContain("#ACT:");
@@ -187,7 +196,7 @@ test("tsz download files using addon", async () => {
   expect(term.write.mock.calls[2][0]).toBe("Saved test.txt.0 to /tmp\n");
 
   expect(file.closeFile.mock.calls.length).toBeGreaterThanOrEqual(1);
-  expect(file.getName.mock.calls.length).toBe(1);
+  expect(file.getLocalName.mock.calls.length).toBeGreaterThanOrEqual(1);
   expect(file.writeFile.mock.calls.length).toBe(1);
   expect(file.writeFile.mock.calls[0][0]).toStrictEqual(strToUint8("test content\n"));
 

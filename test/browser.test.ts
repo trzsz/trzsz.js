@@ -26,7 +26,8 @@ afterAll(() => {
   }
 });
 
-test("doesn't support the File System Access API", async () => {
+test("browser doesn't support", async () => {
+  await expect(openSaveFile("", "", true)).rejects.toThrowError("doesn't support transfer directory");
   delete window.showOpenFilePicker;
   await expect(selectSendFiles()).rejects.toThrowError("File System Access API");
   delete window.showSaveFilePicker;
@@ -59,7 +60,9 @@ test("showOpenFilePicker and read", async () => {
 
   const tfr = (await selectSendFiles())[0];
 
-  expect(tfr.getName()).toBe("test.txt");
+  expect(tfr.getPathId()).toBe(0);
+  expect(tfr.getRelPath()).toStrictEqual(["test.txt"]);
+  expect(tfr.isDir()).toBe(false);
   expect(tfr.getSize()).toBe(17);
 
   let buf = new ArrayBuffer(4);
@@ -80,7 +83,9 @@ test("showOpenFilePicker and no permission", async () => {
 
   const tfr = (await selectSendFiles())[0];
 
-  expect(tfr.getName()).toBe("test.txt");
+  expect(tfr.getPathId()).toBe(0);
+  expect(tfr.getRelPath()).toStrictEqual(["test.txt"]);
+  expect(tfr.isDir()).toBe(false);
   expect(tfr.getSize()).toBe(17);
 
   const abMock = jest.fn().mockRejectedValueOnce(new Error("error"));
@@ -118,9 +123,11 @@ test("showSaveFilePicker and write", async () => {
     createWritable: async () => mockFileStream,
   });
 
-  const tfr = await openSaveFile("", "", false);
+  const tfr = await openSaveFile("", "test.txt", false, true);
 
-  expect(tfr.getName()).toBe("test.txt");
+  expect(tfr.getFileName()).toBe("test.txt");
+  expect(tfr.getLocalName()).toBe("test.txt");
+  expect(tfr.isDir()).toBe(false);
 
   const buf = strToUint8("test file content");
   await tfr.writeFile(buf);

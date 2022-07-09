@@ -255,5 +255,5 @@ export class TextProgressBar implements ProgressCallback {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public onDone(name: string) {}
+  public onDone() {}
 }

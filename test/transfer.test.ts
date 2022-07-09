@@ -17,7 +17,9 @@ async function sleep(timeout) {
 test("upload files using base64 mode", async () => {
   const file = {
     closeFile: jest.fn(),
-    getName: jest.fn(),
+    getPathId: () => 0,
+    getRelPath: jest.fn(),
+    isDir: () => false,
     getSize: jest.fn(),
     readFile: jest.fn(),
   };
@@ -31,7 +33,7 @@ test("upload files using base64 mode", async () => {
   const writer = jest.fn();
   const trzsz = new TrzszTransfer(writer);
 
-  file.getName.mockReturnValueOnce("test.txt");
+  file.getRelPath.mockReturnValueOnce(["test.txt"]);
   file.getSize.mockReturnValueOnce(13);
   file.readFile.mockReturnValueOnce(strToUint8("test content\n"));
 
@@ -76,14 +78,13 @@ test("upload files using base64 mode", async () => {
     await sleep(100);
 
     expect(progress.onDone.mock.calls.length).toBe(1);
-    expect(progress.onDone.mock.calls[0][0]).toBe("test.txt.0");
   }, 100);
 
   const remoteNames = await trzsz.sendFiles([file], progress);
   expect(remoteNames.length).toBe(1);
   expect(remoteNames[0]).toBe("test.txt.0");
 
-  expect(file.getName.mock.calls.length).toBe(1);
+  expect(file.getRelPath.mock.calls.length).toBe(1);
   expect(file.getSize.mock.calls.length).toBe(1);
   expect(file.readFile.mock.calls.length).toBe(1);
   expect(file.closeFile.mock.calls.length).toBe(1);
@@ -92,7 +93,9 @@ test("upload files using base64 mode", async () => {
 test("upload files using binary mode", async () => {
   const file = {
     closeFile: jest.fn(),
-    getName: jest.fn(),
+    getPathId: () => 0,
+    getRelPath: jest.fn(),
+    isDir: () => false,
     getSize: jest.fn(),
     readFile: jest.fn(),
   };
@@ -106,7 +109,7 @@ test("upload files using binary mode", async () => {
   const writer = jest.fn();
   const trzsz = new TrzszTransfer(writer);
 
-  file.getName.mockReturnValueOnce("binary.txt");
+  file.getRelPath.mockReturnValueOnce(["binary.txt"]);
   file.getSize.mockReturnValueOnce(11);
   file.readFile.mockReturnValueOnce(strToUint8("\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A"));
 
@@ -161,14 +164,13 @@ test("upload files using binary mode", async () => {
     await sleep(100);
 
     expect(progress.onDone.mock.calls.length).toBe(1);
-    expect(progress.onDone.mock.calls[0][0]).toBe("binary.txt.0");
   }, 100);
 
   const remoteNames = await trzsz.sendFiles([file], progress);
   expect(remoteNames.length).toBe(1);
   expect(remoteNames[0]).toBe("binary.txt.0");
 
-  expect(file.getName.mock.calls.length).toBe(1);
+  expect(file.getRelPath.mock.calls.length).toBe(1);
   expect(file.getSize.mock.calls.length).toBe(1);
   expect(file.readFile.mock.calls.length).toBe(1);
   expect(file.closeFile.mock.calls.length).toBe(1);
@@ -177,8 +179,10 @@ test("upload files using binary mode", async () => {
 test("download files using base64 mode", async () => {
   const file = {
     closeFile: jest.fn(),
-    getName: jest.fn(),
+    getLocalName: jest.fn(),
     writeFile: jest.fn(),
+    getFileName: () => "test.txt",
+    isDir: () => false,
   };
   const progress = {
     onNum: jest.fn(),
@@ -192,7 +196,7 @@ test("download files using base64 mode", async () => {
 
   const openSaveFile = jest.fn();
   openSaveFile.mockReturnValueOnce(file);
-  file.getName.mockReturnValueOnce("test.txt.0");
+  file.getLocalName.mockReturnValue("test.txt.0");
 
   setTimeout(async () => {
     trzsz.addReceivedData("#NUM:1\n");
@@ -233,7 +237,6 @@ test("download files using base64 mode", async () => {
     expect(writer.mock.calls.length).toBe(5);
     expect(writer.mock.calls[4][0]).toBe("#SUCC:eJy79tqIQ6ZJ72rRdtb0pty5cwE+YAdb\n");
     expect(progress.onDone.mock.calls.length).toBe(1);
-    expect(progress.onDone.mock.calls[0][0]).toBe("test.txt.0");
   }, 100);
 
   const localNames = await trzsz.recvFiles("param", openSaveFile, progress);
@@ -245,7 +248,7 @@ test("download files using base64 mode", async () => {
   expect(openSaveFile.mock.calls[0][1]).toBe("test.txt");
   expect(openSaveFile.mock.calls[0][2]).toBe(false);
 
-  expect(file.getName.mock.calls.length).toBe(1);
+  expect(file.getLocalName.mock.calls.length).toBeGreaterThan(1);
   expect(file.writeFile.mock.calls.length).toBe(1);
   expect(file.writeFile.mock.calls[0][0]).toStrictEqual(strToUint8("test content\n"));
   expect(file.closeFile.mock.calls.length).toBe(1);
@@ -254,8 +257,10 @@ test("download files using base64 mode", async () => {
 test("download files using binary mode", async () => {
   const file = {
     closeFile: jest.fn(),
-    getName: jest.fn(),
+    getLocalName: jest.fn(),
     writeFile: jest.fn(),
+    getFileName: () => "binary.txt",
+    isDir: () => false,
   };
   const progress = {
     onNum: jest.fn(),
@@ -278,7 +283,7 @@ test("download files using binary mode", async () => {
 
   const openSaveFile = jest.fn();
   openSaveFile.mockReturnValueOnce(file);
-  file.getName.mockReturnValueOnce("binary.txt.0");
+  file.getLocalName.mockReturnValue("binary.txt.0");
 
   setTimeout(async () => {
     trzsz.addReceivedData("#NUM:1\n");
@@ -320,7 +325,6 @@ test("download files using binary mode", async () => {
     expect(writer.mock.calls.length).toBe(5);
     expect(writer.mock.calls[4][0]).toBe("#SUCC:eJyLbvvVdeOLad0ScUXHJvHqFwBJWwf+\n");
     expect(progress.onDone.mock.calls.length).toBe(1);
-    expect(progress.onDone.mock.calls[0][0]).toBe("binary.txt.0");
   }, 100);
 
   const localNames = await trzsz.recvFiles("param", openSaveFile, progress);
@@ -332,7 +336,7 @@ test("download files using binary mode", async () => {
   expect(openSaveFile.mock.calls[0][1]).toBe("binary.txt");
   expect(openSaveFile.mock.calls[0][2]).toBe(false);
 
-  expect(file.getName.mock.calls.length).toBe(1);
+  expect(file.getLocalName.mock.calls.length).toBeGreaterThan(1);
   expect(file.writeFile.mock.calls.length).toBe(1);
   expect(file.writeFile.mock.calls[0][0]).toStrictEqual(strToUint8("\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A"));
   expect(file.closeFile.mock.calls.length).toBe(1);
@@ -341,13 +345,15 @@ test("download files using binary mode", async () => {
 test("download files md5 invalid", async () => {
   const file = {
     closeFile: jest.fn(),
-    getName: jest.fn(),
+    getLocalName: jest.fn(),
     writeFile: jest.fn(),
+    getFileName: () => "test.txt",
+    isDir: () => false,
   };
   const writer = jest.fn();
   const openSaveFile = jest.fn();
   openSaveFile.mockReturnValueOnce(file);
-  file.getName.mockReturnValueOnce("test.txt.0");
+  file.getLocalName.mockReturnValue("test.txt.0");
 
   const trzsz = new TrzszTransfer(writer);
   trzsz.addReceivedData("#NUM:1\n");
@@ -356,19 +362,21 @@ test("download files md5 invalid", async () => {
   trzsz.addReceivedData("#DATA:eJwrSS0uUUjOzytJzSvhAgAkDwTm\n");
   trzsz.addReceivedData("#MD5:eJwzNDI2MTUzt7AEAAkeAd4=\n");
 
-  await expect(trzsz.recvFiles("/tmp", openSaveFile, null)).rejects.toThrowError("Check MD5 of test.txt invalid");
+  await expect(trzsz.recvFiles("/tmp", openSaveFile, null)).rejects.toThrowError("MD5");
 });
 
 test("download files md5 not match", async () => {
   const file = {
     closeFile: jest.fn(),
-    getName: jest.fn(),
+    getLocalName: jest.fn(),
     writeFile: jest.fn(),
+    getFileName: () => "test.txt",
+    isDir: () => false,
   };
   const writer = jest.fn();
   const openSaveFile = jest.fn();
   openSaveFile.mockReturnValueOnce(file);
-  file.getName.mockReturnValueOnce("test.txt.0");
+  file.getLocalName.mockReturnValue("test.txt.0");
 
   const trzsz = new TrzszTransfer(writer);
   trzsz.addReceivedData("#NUM:1\n");
@@ -377,19 +385,21 @@ test("download files md5 not match", async () => {
   trzsz.addReceivedData("#DATA:eJwrSS0uUUjOzytJzSvhAgAkDwTm\n");
   trzsz.addReceivedData("#MD5:eJyLbvvVdeOLad0ScUXHJvHqFwBJWwf+\n");
 
-  await expect(trzsz.recvFiles("/tmp", openSaveFile, null)).rejects.toThrowError("Check MD5 of test.txt failed");
+  await expect(trzsz.recvFiles("/tmp", openSaveFile, null)).rejects.toThrowError("MD5");
 });
 
 test("download files timeout", async () => {
   const file = {
     closeFile: jest.fn(),
-    getName: jest.fn(),
+    getLocalName: jest.fn(),
     writeFile: jest.fn(),
+    getFileName: () => "test.txt",
+    isDir: () => false,
   };
   const writer = jest.fn();
   const openSaveFile = jest.fn();
   openSaveFile.mockReturnValueOnce(file);
-  file.getName.mockReturnValueOnce("test.txt.0");
+  file.getLocalName.mockReturnValue("test.txt.0");
 
   const trzsz = new TrzszTransfer(writer);
 
@@ -582,8 +592,10 @@ test("stop transferring and close files", async () => {
 
   const file = {
     closeFile: jest.fn(),
-    getName: jest.fn(),
-    getSize: jest.fn(),
+    getPathId: () => 0,
+    getRelPath: () => ["test.txt"],
+    isDir: () => false,
+    getSize: () => 1,
     readFile: jest.fn(),
   };
   await expect(trzsz.sendFiles([file, file, file], null)).rejects.toThrowError("Stopped");

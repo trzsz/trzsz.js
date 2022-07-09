@@ -109,22 +109,42 @@ export interface TrzszFile {
 }
 
 export interface TrzszFileReader extends TrzszFile {
-  getName: () => string;
+  getPathId: () => number;
+  getRelPath: () => string[];
+  isDir: () => boolean;
   getSize: () => number;
   readFile: (buf: ArrayBuffer) => Promise<Uint8Array>;
 }
 
 export interface TrzszFileWriter extends TrzszFile {
-  getName: () => string;
+  getFileName: () => string;
+  getLocalName: () => string;
+  isDir: () => boolean;
   writeFile: (buf: Uint8Array) => Promise<void>;
 }
 
-export type OpenSaveFile = (saveParam: any, fileName: string, overwrite: boolean) => Promise<TrzszFileWriter>;
+export type OpenSaveFile = (
+  saveParam: any,
+  fileName: string,
+  directory: boolean,
+  overwrite: boolean
+) => Promise<TrzszFileWriter>;
 
 export interface ProgressCallback {
   onNum: (num: number) => void;
   onName: (name: string) => void;
   onSize: (size: number) => void;
   onStep: (step: number) => void;
-  onDone: (name: string) => void;
+  onDone: () => void;
+}
+
+export function checkDuplicateNames(files: TrzszFileReader[]) {
+  const names = new Set();
+  for (const file of files) {
+    const path = file.getRelPath().join("/");
+    if (names.has(path)) {
+      throw new TrzszError(`Duplicate name: ${path}`);
+    }
+    names.add(path);
+  }
 }

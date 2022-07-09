@@ -227,7 +227,11 @@ export class TrzszTransfer {
 
   public async recvAction() {
     const buf = await this.recvString("ACT");
-    return JSON.parse(buf);
+    const action = JSON.parse(buf);
+    if (action.newline) {
+      this.protocolNewline = action.newline;
+    }
+    return action;
   }
 
   public async sendConfig() {
@@ -274,37 +278,76 @@ export class TrzszTransfer {
     }
   }
 
-  public async sendFiles(files: TrzszFileReader[], progressCallback: ProgressCallback) {
-    this.openedFiles.push(...files);
-
-    const binary = this.transferConfig.binary === true;
-    const maxBufSize = this.transferConfig.bufsize ? this.transferConfig.bufsize : 10 * 1024 * 1024;
-    const escapeCodes = this.transferConfig.escape_chars ? escapeCharsToCodes(this.transferConfig.escape_chars) : [];
-
-    const num = files.length;
+  private async sendFileNum(num: number, progressCallback: ProgressCallback) {
     await this.sendInteger("NUM", num);
     await this.checkInteger(num);
     if (progressCallback) {
       progressCallback.onNum(num);
     }
+  }
+
+  private async sendFileName(file: TrzszFileReader, directory: boolean, progressCallback: ProgressCallback) {
+    const relPath = file.getRelPath();
+    const fileName = relPath[relPath.length - 1];
+    if (directory) {
+      const jsonName = {
+        path_id: file.getPathId(),
+        path_name: relPath,
+        is_dir: file.isDir(),
+      };
+      await this.sendString("NAME", JSON.stringify(jsonName));
+    } else {
+      await this.sendString("NAME", fileName);
+    }
+    const remoteName = await this.recvString("SUCC");
+    if (progressCallback) {
+      progressCallback.onName(fileName);
+    }
+    return remoteName;
+  }
+
+  private async sendFileSize(size: number, progressCallback: ProgressCallback) {
+    await this.sendInteger("SIZE", size);
+    await this.checkInteger(size);
+    if (progressCallback) {
+      progressCallback.onSize(size);
+    }
+  }
+
+  private async sendFileMD5(digest: Uint8Array, progressCallback: ProgressCallback) {
+    await this.sendBinary("MD5", digest);
+    await this.checkBinary(digest);
+    if (progressCallback) {
+      progressCallback.onDone();
+    }
+  }
+
+  public async sendFiles(files: TrzszFileReader[], progressCallback: ProgressCallback) {
+    this.openedFiles.push(...files);
+
+    const binary = this.transferConfig.binary === true;
+    const directory = this.transferConfig.directory === true;
+    const maxBufSize = this.transferConfig.bufsize || 10 * 1024 * 1024;
+    const escapeCodes = this.transferConfig.escape_chars ? escapeCharsToCodes(this.transferConfig.escape_chars) : [];
+
+    await this.sendFileNum(files.length, progressCallback);
 
     let bufSize = 1024;
     let buffer = new ArrayBuffer(bufSize);
     const remoteNames = [];
     for (const file of files) {
-      const fileName = file.getName();
-      await this.sendString("NAME", fileName);
-      const remoteName = await this.recvString("SUCC");
-      if (progressCallback) {
-        progressCallback.onName(fileName);
+      const remoteName = await this.sendFileName(file, directory, progressCallback);
+
+      if (!remoteNames.includes(remoteName)) {
+        remoteNames.push(remoteName);
+      }
+
+      if (file.isDir()) {
+        continue;
       }
 
       const fileSize = file.getSize();
-      await this.sendInteger("SIZE", fileSize);
-      await this.checkInteger(fileSize);
-      if (progressCallback) {
-        progressCallback.onSize(fileSize);
-      }
+      await this.sendFileSize(fileSize, progressCallback);
 
       let step = 0;
       const md5 = new Md5();
@@ -330,45 +373,86 @@ export class TrzszTransfer {
       file.closeFile();
 
       const digest = new Uint8Array((md5.end(true) as Int32Array).buffer);
-      await this.sendBinary("MD5", digest);
-      await this.checkBinary(digest);
-      if (progressCallback) {
-        progressCallback.onDone(remoteName);
-      }
-      remoteNames.push(remoteName);
+      await this.sendFileMD5(digest, progressCallback);
     }
 
     return remoteNames;
   }
 
-  public async recvFiles(saveParam: any, openSaveFile: OpenSaveFile, progressCallback: ProgressCallback) {
-    const binary = this.transferConfig.binary === true;
-    const overwrite = this.transferConfig.overwrite === true;
-    const timeoutInMilliseconds = this.transferConfig.timeout ? this.transferConfig.timeout * 1000 : 100000;
-    const escapeCodes = this.transferConfig.escape_chars ? escapeCharsToCodes(this.transferConfig.escape_chars) : [];
-
+  private async recvFileNum(progressCallback: ProgressCallback) {
     const num = await this.recvInteger("NUM");
     await this.sendInteger("SUCC", num);
     if (progressCallback) {
       progressCallback.onNum(num);
     }
+    return num;
+  }
+
+  private async recvFileName(
+    saveParam: any,
+    openSaveFile: OpenSaveFile,
+    directory: boolean,
+    overwrite: boolean,
+    progressCallback: ProgressCallback
+  ) {
+    const fileName = await this.recvString("NAME");
+    const file = await openSaveFile(saveParam, fileName, directory, overwrite);
+    await this.sendString("SUCC", file.getLocalName());
+    if (progressCallback) {
+      progressCallback.onName(file.getFileName());
+    }
+    return file;
+  }
+
+  private async recvFileSize(progressCallback: ProgressCallback) {
+    const fileSize = await this.recvInteger("SIZE");
+    await this.sendInteger("SUCC", fileSize);
+    if (progressCallback) {
+      progressCallback.onSize(fileSize);
+    }
+    return fileSize;
+  }
+
+  private async recvFileMD5(digest: Uint8Array, progressCallback: ProgressCallback) {
+    const expectDigest = await this.recvBinary("MD5");
+    if (digest.length != expectDigest.length) {
+      throw new TrzszError("Check MD5 failed");
+    }
+    for (let j = 0; j < digest.length; j++) {
+      if (digest[j] != expectDigest[j]) {
+        throw new TrzszError("Check MD5 failed");
+      }
+    }
+    await this.sendBinary("SUCC", digest);
+    if (progressCallback) {
+      progressCallback.onDone();
+    }
+  }
+
+  public async recvFiles(saveParam: any, openSaveFile: OpenSaveFile, progressCallback: ProgressCallback) {
+    const binary = this.transferConfig.binary === true;
+    const directory = this.transferConfig.directory === true;
+    const overwrite = this.transferConfig.overwrite === true;
+    const timeoutInMilliseconds = this.transferConfig.timeout ? this.transferConfig.timeout * 1000 : 100000;
+    const escapeCodes = this.transferConfig.escape_chars ? escapeCharsToCodes(this.transferConfig.escape_chars) : [];
+
+    const num = await this.recvFileNum(progressCallback);
 
     const localNames = [];
     for (let i = 0; i < num; i++) {
-      const fileName = await this.recvString("NAME");
-      const file = await openSaveFile(saveParam, fileName, overwrite);
-      this.openedFiles.push(file);
-      const localName = file.getName();
-      await this.sendString("SUCC", localName);
-      if (progressCallback) {
-        progressCallback.onName(fileName);
+      const file = await this.recvFileName(saveParam, openSaveFile, directory, overwrite, progressCallback);
+
+      if (!localNames.includes(file.getLocalName())) {
+        localNames.push(file.getLocalName());
       }
 
-      const fileSize = await this.recvInteger("SIZE");
-      await this.sendInteger("SUCC", fileSize);
-      if (progressCallback) {
-        progressCallback.onSize(fileSize);
+      if (file.isDir()) {
+        continue;
       }
+
+      this.openedFiles.push(file);
+
+      const fileSize = await this.recvFileSize(progressCallback);
 
       let step = 0;
       const md5 = new Md5();
@@ -389,21 +473,8 @@ export class TrzszTransfer {
       }
       file.closeFile();
 
-      const actualDigest = new Uint8Array((md5.end(true) as Int32Array).buffer);
-      const expectDigest = await this.recvBinary("MD5");
-      if (actualDigest.length != expectDigest.length) {
-        throw new TrzszError(`Check MD5 of ${fileName} invalid`);
-      }
-      for (let j = 0; j < actualDigest.length; j++) {
-        if (actualDigest[j] != expectDigest[j]) {
-          throw new TrzszError(`Check MD5 of ${fileName} failed`);
-        }
-      }
-      await this.sendBinary("SUCC", actualDigest);
-      if (progressCallback) {
-        progressCallback.onDone(localName);
-      }
-      localNames.push(localName);
+      const digest = new Uint8Array((md5.end(true) as Int32Array).buffer);
+      await this.recvFileMD5(digest, progressCallback);
     }
 
     return localNames;

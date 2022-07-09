@@ -10,7 +10,7 @@ import { TrzszError } from "./comm";
 import { TrzszOptions } from "./options";
 import { TrzszTransfer } from "./transfer";
 import { TextProgressBar } from "./progress";
-import { isRunningInBrowser, strToUint8, uint8ToStr } from "./comm";
+import { isRunningInBrowser, strToUint8, uint8ToStr, checkDuplicateNames } from "./comm";
 
 /**
  * trzsz magic key
@@ -245,7 +245,7 @@ export class TrzszFilter {
       }
       nodefs.checkPathWritable(savePath);
       openSaveFile = nodefs.openSaveFile;
-      saveParam = savePath;
+      saveParam = { path: savePath, maps: new Map<string, string>() };
     }
 
     await this.trzszTransfer.sendAction(true, remoteIsWindows);
@@ -274,8 +274,7 @@ export class TrzszFilter {
       sendFiles = await browser.selectSendFiles();
     } else {
       const filePaths = await this.chooseSendFiles(directory);
-      nodefs.checkFilesReadable(filePaths);
-      sendFiles = await nodefs.openSendFiles(filePaths);
+      sendFiles = nodefs.checkPathsReadable(filePaths, directory);
     }
 
     if (!sendFiles || !sendFiles.length) {
@@ -285,6 +284,10 @@ export class TrzszFilter {
 
     await this.trzszTransfer.sendAction(true, remoteIsWindows);
     const config = await this.trzszTransfer.recvConfig();
+
+    if (config.overwrite === true) {
+      checkDuplicateNames(sendFiles);
+    }
 
     if (config.quiet !== true) {
       this.textProgressBar = new TextProgressBar(this.writeToTerminal, this.terminalColumns, config.tmux_pane_width);

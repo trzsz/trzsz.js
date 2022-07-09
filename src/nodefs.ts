@@ -18,32 +18,6 @@ function requireSafely(name) {
   }
 }
 
-export function checkFilesReadable(filePaths: string[]) {
-  if (!filePaths || !filePaths.length) {
-    return false;
-  }
-
-  for (const filePath of filePaths) {
-    if (!fs.existsSync(filePath)) {
-      throw new TrzszError(`No such file: ${filePath}`);
-    }
-    const stats = fs.statSync(filePath);
-    if (stats.isDirectory()) {
-      throw new TrzszError(`Is a directory: ${filePath}`);
-    }
-    if (!stats.isFile()) {
-      throw new TrzszError(`Not a regular file: ${filePath}`);
-    }
-    try {
-      fs.accessSync(filePath, fs.constants.R_OK);
-    } catch (err) {
-      throw new TrzszError(`No permission to read: ${filePath}`);
-    }
-  }
-
-  return true;
-}
-
 export function checkPathWritable(filePath: string) {
   if (!filePath) {
     return false;
@@ -66,19 +40,32 @@ export function checkPathWritable(filePath: string) {
 }
 
 class NodefsFileReader implements TrzszFileReader {
-  private fd: number;
-  private name: string;
+  private pathId: number;
+  private absPath: string;
+  private relPath: string[];
+  private dir: boolean;
   private size: number;
   private closed: boolean = false;
+  private fd: number | null = null;
 
-  constructor(fd: number, name: string, size: number) {
-    this.fd = fd;
-    this.name = name;
+  constructor(pathId: number, absPath: string, relPath: string[], dir: boolean, size: number) {
+    this.pathId = pathId;
+    this.absPath = absPath;
+    this.relPath = relPath;
+    this.dir = dir;
     this.size = size;
   }
 
-  public getName(): string {
-    return this.name;
+  public getPathId(): number {
+    return this.pathId;
+  }
+
+  public getRelPath(): string[] {
+    return this.relPath;
+  }
+
+  public isDir(): boolean {
+    return this.dir;
   }
 
   public getSize(): number {
@@ -86,6 +73,12 @@ class NodefsFileReader implements TrzszFileReader {
   }
 
   public async readFile(buf: ArrayBuffer) {
+    if (this.closed) {
+      throw new TrzszError(`File closed: ${this.absPath}`, null, true);
+    }
+    if (this.fd === null) {
+      this.fd = fs.openSync(this.absPath, "r");
+    }
     const uint8 = new Uint8Array(buf);
     const n = fs.readSync(this.fd, uint8, 0, uint8.length, null);
     return uint8.subarray(0, n);
@@ -93,48 +86,96 @@ class NodefsFileReader implements TrzszFileReader {
 
   public closeFile() {
     if (!this.closed) {
-      fs.closeSync(this.fd);
       this.closed = true;
-      this.fd = -1;
+      if (this.fd !== null) {
+        fs.closeSync(this.fd);
+        this.fd = null;
+      }
     }
   }
 }
 
-export async function openSendFiles(filePaths: string[] | undefined): Promise<TrzszFileReader[] | undefined> {
+function checkPathReadable(
+  pathId: number,
+  absPath: string,
+  stats: any,
+  fileList: NodefsFileReader[],
+  relPath: string[],
+  visitedDir: Set<string>
+) {
+  if (!stats.isDirectory()) {
+    if (!stats.isFile()) {
+      throw new TrzszError(`Not a regular file: ${absPath}`);
+    }
+    try {
+      fs.accessSync(absPath, fs.constants.R_OK);
+    } catch (err) {
+      throw new TrzszError(`No permission to read: ${absPath}`);
+    }
+    fileList.push(new NodefsFileReader(pathId, absPath, relPath, false, stats.size));
+    return;
+  }
+
+  const realPath = fs.realpathSync(absPath);
+  if (visitedDir.has(realPath)) {
+    throw new TrzszError(`Duplicate link: ${absPath}`);
+  }
+  visitedDir.add(realPath);
+  fileList.push(new NodefsFileReader(pathId, absPath, relPath, true, 0));
+
+  fs.readdirSync(absPath).forEach((file) => {
+    const filePath = path.join(absPath, file);
+    checkPathReadable(pathId, filePath, fs.statSync(filePath), fileList, [...relPath, file], visitedDir);
+  });
+}
+
+export function checkPathsReadable(
+  filePaths: string[] | undefined,
+  directory: boolean = false
+): TrzszFileReader[] | undefined {
   if (!filePaths || !filePaths.length) {
     return undefined;
   }
-
-  const nfrArray: NodefsFileReader[] = [];
-  try {
-    for (const filePath of filePaths) {
-      const fd = fs.openSync(filePath, "r");
-      const name = path.basename(filePath);
-      const { size } = fs.statSync(filePath);
-      nfrArray.push(new NodefsFileReader(fd, name, size));
+  const fileList: NodefsFileReader[] = [];
+  for (const [idx, filePath] of filePaths.entries()) {
+    const absPath = path.resolve(filePath);
+    if (!fs.existsSync(absPath)) {
+      throw new TrzszError(`No such file: ${absPath}`);
     }
-  } catch (err) {
-    for (const nfr of nfrArray) {
-      nfr.closeFile();
+    const stats = fs.statSync(absPath);
+    if (!directory && stats.isDirectory()) {
+      throw new TrzszError(`Is a directory: ${absPath}`);
     }
-    throw err;
+    const visitedDir = new Set<string>();
+    checkPathReadable(idx, absPath, stats, fileList, [path.basename(absPath)], visitedDir);
   }
-
-  return nfrArray;
+  return fileList;
 }
 
 class NodefsFileWriter implements TrzszFileWriter {
-  private fd: number;
-  private name: string;
+  private fileName: string;
+  private localName: string;
+  private fd: number | null;
+  private dir: boolean;
   private closed: boolean = false;
 
-  constructor(fd: number, name: string) {
+  constructor(fileName, localName: string, fd: number | null, dir: boolean = false) {
+    this.fileName = fileName;
+    this.localName = localName;
     this.fd = fd;
-    this.name = name;
+    this.dir = dir;
   }
 
-  public getName(): string {
-    return this.name;
+  public getFileName(): string {
+    return this.fileName;
+  }
+
+  public getLocalName(): string {
+    return this.localName;
+  }
+
+  public isDir(): boolean {
+    return this.dir;
   }
 
   public async writeFile(buf: Uint8Array) {
@@ -143,14 +184,16 @@ class NodefsFileWriter implements TrzszFileWriter {
 
   public closeFile() {
     if (!this.closed) {
-      fs.closeSync(this.fd);
       this.closed = true;
-      this.fd = -1;
+      if (this.fd !== null) {
+        fs.closeSync(this.fd);
+        this.fd = null;
+      }
     }
   }
 }
 
-function getSaveName(savePath: string, fileName: string) {
+function getNewName(savePath: string, fileName: string) {
   if (!fs.existsSync(path.join(savePath, fileName))) {
     return fileName;
   }
@@ -163,18 +206,77 @@ function getSaveName(savePath: string, fileName: string) {
   throw new TrzszError("Fail to assign new file name");
 }
 
-export async function openSaveFile(savePath: string, fileName: string, overwrite: boolean) {
-  const saveName = overwrite ? fileName : getSaveName(savePath, fileName);
-  const filePath = path.join(savePath, saveName);
+function doCreateFile(absPath: string) {
   try {
-    const fd = fs.openSync(filePath, "w");
-    return new NodefsFileWriter(fd, saveName);
+    return fs.openSync(absPath, "w");
   } catch (err) {
-    if (err.errno === -13) {
-      throw new TrzszError(`No permission to write: ${filePath}`);
+    if (err.errno === -13 || err.errno === -4048) {
+      throw new TrzszError(`No permission to write: ${absPath}`);
     } else if (err.errno === -21 || err.errno === -4068) {
-      throw new TrzszError(`Is a directory: ${filePath}`);
+      throw new TrzszError(`Is a directory: ${absPath}`);
     }
     throw err;
   }
+}
+
+function doCreateDirectory(absPath: string) {
+  if (!fs.existsSync(absPath)) {
+    fs.mkdirSync(absPath, { recursive: true, mode: 0o755 });
+  }
+  const stats = fs.statSync(absPath);
+  if (!stats.isDirectory()) {
+    throw new TrzszError(`Not a directory: ${absPath}`);
+  }
+}
+
+function createFile(savePath, fileName: string, overwrite: boolean) {
+  const localName = overwrite ? fileName : getNewName(savePath, fileName);
+  const fd = doCreateFile(path.join(savePath, localName));
+  return new NodefsFileWriter(fileName, localName, fd);
+}
+
+export async function openSaveFile(saveParam: any, fileName: string, directory: boolean, overwrite: boolean) {
+  if (!directory) {
+    return createFile(saveParam.path, fileName, overwrite);
+  }
+
+  const file = JSON.parse(fileName);
+  if (
+    !file.hasOwnProperty("path_name") ||
+    !file.hasOwnProperty("path_id") ||
+    !file.hasOwnProperty("is_dir") ||
+    file.path_name.length < 1
+  ) {
+    throw new TrzszError(`Invalid name: ${fileName}`);
+  }
+
+  fileName = file.path_name[file.path_name.length - 1];
+  let localName: string;
+  if (overwrite) {
+    localName = file.path_name[0];
+  } else {
+    if (saveParam.maps.has(file.path_id)) {
+      localName = saveParam.maps.get(file.path_id);
+    } else {
+      localName = getNewName(saveParam.path, file.path_name[0]);
+      saveParam.maps.set(file.path_id, localName);
+    }
+  }
+
+  let fullPath: string;
+  if (file.path_name.length > 1) {
+    const p = path.join(saveParam.path, localName, ...file.path_name.slice(1, file.path_name.length - 1));
+    doCreateDirectory(p);
+    fullPath = path.join(p, fileName);
+  } else {
+    fullPath = path.join(saveParam.path, localName);
+  }
+
+  if (file.is_dir === true) {
+    doCreateDirectory(fullPath);
+    return new NodefsFileWriter(fileName, localName, null, true);
+  }
+
+  const fd = doCreateFile(fullPath);
+  return new NodefsFileWriter(fileName, localName, fd);
 }

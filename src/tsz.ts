@@ -6,14 +6,14 @@
 
 export {};
 
-import { trzszVersion } from "./comm";
 import { BufferSizeParser } from "./args";
+import { checkPathsReadable } from "./nodefs";
 import { ArgumentParser, RawTextHelpFormatter } from "argparse";
+import { trzszVersion, checkDuplicateNames, TrzszError } from "./comm";
 
-/**
- * tsz main entry
- */
-function main() {
+/* eslint-disable require-jsdoc */
+
+function parseArgs() {
   const parser = new ArgumentParser({
     description: "Send file(s), similar to sz and compatible with tmux.",
     formatter_class: RawTextHelpFormatter,
@@ -42,10 +42,27 @@ function main() {
     help: "timeout ( N seconds ) for each buffer chunk.\nN <= 0 means never timeout. (default: 10)",
   });
   parser.add_argument("file", { nargs: "+", help: "file(s) to be sent" });
+  return parser.parse_args();
+}
 
-  const args = parser.parse_args();
-
+/**
+ * tsz main entry
+ */
+function main() {
+  const args = parseArgs();
   console.dir(args);
+
+  try {
+    const fileList = checkPathsReadable(args.file, args.directory);
+    console.log(fileList);
+
+    if (args.overwrite) {
+      checkDuplicateNames(fileList);
+    }
+  } catch (err) {
+    console.log(TrzszError.getErrorMessage(err));
+    return;
+  }
 }
 
 main();

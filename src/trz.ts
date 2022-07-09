@@ -10,10 +10,9 @@ import { trzszVersion } from "./comm";
 import { BufferSizeParser } from "./args";
 import { ArgumentParser, RawTextHelpFormatter } from "argparse";
 
-/**
- * trz main entry
- */
-function main() {
+/* eslint-disable require-jsdoc */
+
+function parseArgs() {
   const parser = new ArgumentParser({
     description: "Receive file(s), similar to rz and compatible with tmux.",
     formatter_class: RawTextHelpFormatter,
@@ -42,9 +41,14 @@ function main() {
     help: "timeout ( N seconds ) for each buffer chunk.\nN <= 0 means never timeout. (default: 10)",
   });
   parser.add_argument("path", { nargs: "?", default: ".", help: "path to save file(s). (default: current directory)" });
+  return parser.parse_args();
+}
 
-  const args = parser.parse_args();
-
+/**
+ * trz main entry
+ */
+function main() {
+  const args = parseArgs();
   console.dir(args);
 }
 

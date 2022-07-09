@@ -12,18 +12,22 @@ window.newTrzsz = function (writeToTerminal, sendToServer, terminalColumns, isWi
     // send the user input to the server
     sendToServer: sendToServer,
     // choose some files to be sent to the server
-    chooseSendFiles: async () => {
+    chooseSendFiles: async (directory) => {
+      const properties = [
+        "openFile",
+        "multiSelections",
+        "showHiddenFiles",
+        "noResolveAliases",
+        "treatPackageAsDirectory",
+        "dontAddToRecent",
+      ];
+      if (directory) {
+        properties.push("openDirectory");
+      }
       return ipcRenderer.invoke("show-open-dialog-sync", {
         title: "Choose some files to send",
         message: "Choose some files to send",
-        properties: [
-          "openFile",
-          "multiSelections",
-          "showHiddenFiles",
-          "noResolveAliases",
-          "treatPackageAsDirectory",
-          "dontAddToRecent",
-        ],
+        properties: properties,
       });
     },
     // choose a directory to save the received files

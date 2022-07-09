@@ -217,12 +217,12 @@ test("progress bar multiple files", () => {
   tgb.onName("中文😀test.txt");
   tgb.onSize(1000);
   tgb.onStep(100);
-  tgb.onDone("test.txt");
+  tgb.onDone();
   tgb.onName("英文😀test.txt");
   tgb.onSize(2000);
   tgb.setTerminalColumns(80);
   tgb.onStep(300);
-  tgb.onDone("test.txt");
+  tgb.onDone();
   expect(writer.mock.calls.length).toBe(2);
   expect(dateNowSpy.mock.calls.length).toBe(4);
   expect(writer.mock.calls[0][0]).toContain("(1/2) 中文😀test.txt [");

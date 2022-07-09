@@ -10,15 +10,25 @@ import { TrzszError, TrzszFileReader, TrzszFileWriter } from "./comm";
 
 class BrowserFileReader implements TrzszFileReader {
   private closed: boolean = false;
+  private pathId: number;
   private file: File | null;
   private pos: number = 0;
 
-  constructor(file: File) {
+  constructor(pathId: number, file: File) {
+    this.pathId = pathId;
     this.file = file;
   }
 
-  public getName(): string {
-    return this.file.name;
+  public getPathId(): number {
+    return this.pathId;
+  }
+
+  public getRelPath(): string[] {
+    return [this.file.name];
+  }
+
+  public isDir(): boolean {
+    return false;
   }
 
   public getSize(): number {
@@ -68,8 +78,8 @@ export async function selectSendFiles(): Promise<TrzszFileReader[] | undefined> 
   }
 
   const bfrArray: BrowserFileReader[] = [];
-  for (const fileHandle of fileHandleArray) {
-    bfrArray.push(new BrowserFileReader(await fileHandle.getFile()));
+  for (const [idx, fileHandle] of fileHandleArray.entries()) {
+    bfrArray.push(new BrowserFileReader(idx, await fileHandle.getFile()));
   }
   return bfrArray;
 }
@@ -77,15 +87,25 @@ export async function selectSendFiles(): Promise<TrzszFileReader[] | undefined> 
 class BrowserFileWriter implements TrzszFileWriter {
   private writer; // FileSystemWritableFileStream
   private closed: boolean = false;
-  private name: string;
+  private fileName: string;
+  private localName: string;
 
-  constructor(name: string, writer) {
-    this.name = name;
+  constructor(fileName, localName: string, writer) {
+    this.fileName = fileName;
+    this.localName = localName;
     this.writer = writer;
   }
 
-  public getName(): string {
-    return this.name;
+  public getFileName(): string {
+    return this.fileName;
+  }
+
+  public getLocalName(): string {
+    return this.localName;
+  }
+
+  public isDir(): boolean {
+    return false;
   }
 
   public async writeFile(buf: Uint8Array) {
@@ -117,8 +137,15 @@ function isNeedUserPermission(err: Error) {
   return err.name === "SecurityError";
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function openSaveFile(requireUserPermission: Function, fileName: string, overwrite: boolean) {
+export async function openSaveFile(
+  requireUserPermission: Function,
+  fileName: string,
+  directory: boolean,
+  overwrite: boolean // eslint-disable-line @typescript-eslint/no-unused-vars
+) {
+  if (directory) {
+    throw new TrzszError("The browser doesn't support transfer directory");
+  }
   if (!window.hasOwnProperty("showSaveFilePicker")) {
     throw new TrzszError("The browser doesn't support the File System Access API");
   }
@@ -148,7 +175,7 @@ export async function openSaveFile(requireUserPermission: Function, fileName: st
 
   const file = await fileHandle.getFile();
   const writer = await fileHandle.createWritable();
-  return new BrowserFileWriter(file.name, writer);
+  return new BrowserFileWriter(fileName, file.name, writer);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

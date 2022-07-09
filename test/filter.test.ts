@@ -319,11 +319,17 @@ test("trz upload files in browser", async () => {
   });
   selectSendFiles.mockResolvedValueOnce([
     {
-      getName: () => {
-        return "test.txt";
+      getPathId: () => {
+        return 0;
+      },
+      getRelPath: () => {
+        return ["test.txt"];
       },
       getSize: () => {
         return 13;
+      },
+      isDir: () => {
+        return false;
       },
       readFile: async () => {
         return strToUint8("test content\n");
@@ -382,11 +388,13 @@ test("tsz download files in browser", async () => {
   });
   const file = {
     closeFile: jest.fn(),
-    getName: jest.fn(),
+    getLocalName: jest.fn(),
     writeFile: jest.fn(),
+    getFileName: () => "test.txt",
+    isDir: () => false,
   };
 
-  file.getName.mockReturnValueOnce("test.txt.0");
+  file.getLocalName.mockReturnValueOnce("test.txt.0");
   openSaveFile.mockResolvedValueOnce(file as any);
 
   trzsz.processServerOutput("::TRZSZ:TRANSFER" + ":S:1.0.0:0");
@@ -409,6 +417,7 @@ test("tsz download files in browser", async () => {
 
   await sleep(500);
   expect(openSaveFile.mock.calls.length).toBe(1);
+  expect(openSaveFile.mock.calls[0][1]).toBe("test.txt");
 
   expect(sendToServer.mock.calls.length).toBe(7);
   expect(sendToServer.mock.calls[0][0]).toContain("#ACT:");
@@ -426,7 +435,7 @@ test("tsz download files in browser", async () => {
   expect(writeToTerminal.mock.calls[2][0]).toBe("Saved test.txt.0 to /tmp\n");
 
   expect(file.closeFile.mock.calls.length).toBeGreaterThanOrEqual(1);
-  expect(file.getName.mock.calls.length).toBe(1);
+  expect(file.getLocalName.mock.calls.length).toBeGreaterThanOrEqual(1);
   expect(file.writeFile.mock.calls.length).toBe(1);
   expect(file.writeFile.mock.calls[0][0]).toStrictEqual(strToUint8("test content\n"));
 
