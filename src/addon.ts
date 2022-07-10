@@ -15,6 +15,7 @@ export class TrzszAddon implements ITerminalAddon {
   private socket: WebSocket;
   private disposables: IDisposable[] = [];
   private options: TrzszOptions;
+  private trzsz: TrzszFilter | null = null;
 
   /**
    * Create a TrzszAddon
@@ -42,7 +43,7 @@ export class TrzszAddon implements ITerminalAddon {
       }
       this.socket.send(data);
     };
-    const trzsz = new TrzszFilter({
+    this.trzsz = new TrzszFilter({
       writeToTerminal: writeToTerminal,
       sendToServer: sendToServer,
       chooseSendFiles: this.options.chooseSendFiles,
@@ -52,10 +53,12 @@ export class TrzszAddon implements ITerminalAddon {
       isWindowsShell: this.options.isWindowsShell,
     });
 
-    this.disposables.push(this.addSocketListener(this.socket, "message", (ev) => trzsz.processServerOutput(ev.data)));
-    this.disposables.push(terminal.onData((data) => trzsz.processTerminalInput(data)));
-    this.disposables.push(terminal.onBinary((data) => trzsz.processBinaryInput(data)));
-    this.disposables.push(terminal.onResize((size) => trzsz.setTerminalColumns(size.cols)));
+    this.disposables.push(
+      this.addSocketListener(this.socket, "message", (ev) => this.trzsz.processServerOutput(ev.data))
+    );
+    this.disposables.push(terminal.onData((data) => this.trzsz.processTerminalInput(data)));
+    this.disposables.push(terminal.onBinary((data) => this.trzsz.processBinaryInput(data)));
+    this.disposables.push(terminal.onResize((size) => this.trzsz.setTerminalColumns(size.cols)));
     this.disposables.push(this.addSocketListener(this.socket, "close", () => this.dispose()));
     this.disposables.push(this.addSocketListener(this.socket, "error", () => this.dispose()));
   }
@@ -66,6 +69,19 @@ export class TrzszAddon implements ITerminalAddon {
   public dispose(): void {
     for (const d of this.disposables) {
       d.dispose();
+    }
+    this.trzsz = null;
+  }
+
+  /**
+   * Upload files or directories to the server.
+   * @param {string[] | DataTransferItemList} items - The files or directories to upload.
+   */
+  public async uploadFiles(items: string[] | DataTransferItemList) {
+    if (this.trzsz) {
+      return this.trzsz.uploadFiles(items);
+    } else {
+      throw new Error("Addon has not been activated");
     }
   }
 

@@ -4,7 +4,17 @@
  * @license MIT
  */
 
-import { strToUint8, uint8ToStr, encodeBuffer, decodeBuffer, TrzszError } from "../src/comm";
+import {
+  strToUint8,
+  strToArrBuf,
+  uint8ToStr,
+  encodeBuffer,
+  decodeBuffer,
+  checkDuplicateNames,
+  isArrayOfType,
+  stripServerOutput,
+  TrzszError,
+} from "../src/comm";
 
 test("zlib and base64 encode buffer", () => {
   expect(encodeBuffer("abc")).toBe("eJxLTEoGAAJNASc=");
@@ -85,4 +95,44 @@ test("trzsz error no stack", () => {
   const err = new Error("fail message");
   err.stack = undefined;
   expect(TrzszError.getErrorMessage(err)).toContain("fail message");
+});
+
+test("check duplicate names", () => {
+  const file = {
+    getPathId: () => 0,
+    getRelPath: () => ["a", "b", "c"],
+    isDir: () => true,
+    getSize: () => 0,
+    readFile: jest.fn(),
+    closeFile: jest.fn(),
+  };
+  expect(() => checkDuplicateNames([file])).not.toThrow("Duplicate name");
+  expect(() => checkDuplicateNames([file, file])).toThrow("Duplicate name");
+});
+
+test("is array of string", () => {
+  expect(isArrayOfType([], "string")).toBe(true);
+  expect(isArrayOfType(["a"], "string")).toBe(true);
+  expect(isArrayOfType(["a", "b", "c"], "string")).toBe(true);
+  expect(isArrayOfType("a", "string")).toBe(false);
+  expect(isArrayOfType(["a", 1], "string")).toBe(false);
+});
+
+test("strip server output", () => {
+  function testStripServerOutput(output: string | null, result: string | null) {
+    expect(stripServerOutput(output)).toBe(result);
+    expect(stripServerOutput(strToUint8(output))).toBe(result);
+    expect(stripServerOutput(strToArrBuf(output))).toBe(result);
+  }
+
+  testStripServerOutput("", "");
+  testStripServerOutput("trz\r\n", "trz");
+  testStripServerOutput("trz -d\r\n", "trz -d");
+  testStripServerOutput("\x1b[29Ctrz\x1b[01;34m\r\n", "trz");
+  testStripServerOutput("\x1b[29Ctrz\x1b[01;34m -d\r\n", "trz -d");
+
+  const b = new Blob(["test"]);
+  expect(stripServerOutput(b)).toBe(b);
+
+  expect(() => stripServerOutput("A".repeat(200000))).not.toThrow();
 });

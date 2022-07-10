@@ -148,3 +148,60 @@ export function checkDuplicateNames(files: TrzszFileReader[]) {
     names.add(path);
   }
 }
+
+export function isArrayOfType(arr: any, type: string) {
+  if (!Array.isArray(arr)) {
+    return false;
+  }
+  for (const a of arr) {
+    if (typeof a !== type) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function isVT100End(c: number): boolean {
+  if (0x61 <= c && c <= 0x7a) {
+    // 'a' <= c && c <= 'z'
+    return true;
+  }
+  if (0x41 <= c && c <= 0x5a) {
+    // 'A' <= c && c <= 'Z'
+    return true;
+  }
+  return false;
+}
+
+export function stripServerOutput(output: string | ArrayBuffer | Uint8Array | Blob) {
+  let uint8: Uint8Array;
+  if (typeof output === "string") {
+    uint8 = strToUint8(output);
+  } else if (output instanceof ArrayBuffer) {
+    uint8 = new Uint8Array(output);
+  } else if (output instanceof Uint8Array) {
+    uint8 = output;
+  } else {
+    return output;
+  }
+  const buf = new Uint8Array(uint8.length);
+  let skipVT100 = false;
+  let idx = 0;
+  for (let i = 0; i < uint8.length; i++) {
+    const c = uint8[i];
+    if (skipVT100) {
+      if (isVT100End(c)) {
+        skipVT100 = false;
+      }
+    } else if (c == 0x1b) {
+      skipVT100 = true;
+    } else {
+      buf[idx++] = c;
+    }
+  }
+  const result = buf.subarray(0, idx);
+  if (result.length > 1024) {
+    return result;
+  }
+  return String.fromCharCode.apply(null, result).trim();
+}

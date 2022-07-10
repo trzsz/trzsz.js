@@ -10,7 +10,16 @@ import { TrzszError } from "./comm";
 import { TrzszOptions } from "./options";
 import { TrzszTransfer } from "./transfer";
 import { TextProgressBar } from "./progress";
-import { isRunningInBrowser, strToUint8, uint8ToStr, checkDuplicateNames } from "./comm";
+import { parseDataTransferItemList } from "./drag";
+import {
+  isRunningInBrowser,
+  strToUint8,
+  uint8ToStr,
+  checkDuplicateNames,
+  isArrayOfType,
+  stripServerOutput,
+  TrzszFileReader,
+} from "./comm";
 
 /**
  * trzsz magic key
@@ -74,6 +83,10 @@ export class TrzszFilter {
   private trzszTransfer: TrzszTransfer | null = null;
   private textProgressBar: TextProgressBar | null = null;
   private uniqueIdMaps: Map<string, number> = new Map<string, number>();
+  private uploadFilesList: TrzszFileReader[] | null = null;
+  private uploadFilesResolve: Function | null = null;
+  private uploadFilesReject: Function | null = null;
+  private uploadInterrupting: boolean = false;
 
   /**
    * Create a trzsz filter to upload and download files.
@@ -110,6 +123,21 @@ export class TrzszFilter {
       this.trzszTransfer.addReceivedData(output);
       return;
     }
+
+    if (this.uploadInterrupting) {
+      return;
+    }
+    if (this.uploadFilesList) {
+      const out = stripServerOutput(output);
+      if (out === "trz" || out === "trz -d") {
+        this.writeToTerminal("\r\n");
+        return;
+      }
+      if (out === "" || out === '"') {
+        return;
+      }
+    }
+
     setTimeout(() => this.detectAndHandleTrzsz(output), 10);
     this.writeToTerminal(output);
   }
@@ -168,6 +196,60 @@ export class TrzszFilter {
     void this.trzszTransfer.stopTransferring();
   }
 
+  /**
+   * Upload files or directories to the server.
+   * @param {string[] | DataTransferItemList} items - The files or directories to upload.
+   */
+  public async uploadFiles(items: string[] | DataTransferItemList) {
+    if (this.uploadFilesList || this.isTransferringFiles()) {
+      throw new Error("The previous upload has not been completed yet");
+    }
+    if (items instanceof DataTransferItemList) {
+      this.uploadFilesList = await parseDataTransferItemList(items as DataTransferItemList);
+    } else if (isArrayOfType(items, "string") && !isRunningInBrowser) {
+      this.uploadFilesList = nodefs.checkPathsReadable(items as string[], true);
+    } else {
+      throw new Error("The upload items type is not supported");
+    }
+
+    if (!this.uploadFilesList || !this.uploadFilesList.length) {
+      this.uploadFilesList = null;
+      throw new Error("No files to upload");
+    }
+
+    let hasDir = false;
+    for (const file of this.uploadFilesList) {
+      if (file.isDir() || file.getRelPath().length > 1) {
+        hasDir = true;
+        break;
+      }
+    }
+
+    this.uploadInterrupting = true;
+    this.sendToServer("\x03");
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    this.uploadInterrupting = false;
+
+    this.sendToServer(hasDir ? "trz -d\r" : "trz\r");
+
+    // cleanup if it's not uploading
+    setTimeout(() => {
+      if (this.uploadFilesList) {
+        this.uploadFilesList = null;
+        this.uploadFilesResolve = null;
+        if (this.uploadFilesReject) {
+          this.uploadFilesReject("Upload does not start");
+          this.uploadFilesReject = null;
+        }
+      }
+    }, 1000);
+
+    return new Promise((resolve, reject) => {
+      this.uploadFilesResolve = resolve;
+      this.uploadFilesReject = reject;
+    });
+  }
+
   // disable jsdoc for private method
   /* eslint-disable require-jsdoc */
 
@@ -220,9 +302,17 @@ export class TrzszFilter {
       } else if (mode === "D") {
         await this.handleTrzszUploadFiles(version, true, remoteIsWindows);
       }
+      if (this.uploadFilesResolve) {
+        this.uploadFilesResolve();
+      }
     } catch (err) {
       await this.trzszTransfer.clientError(err);
+      if (this.uploadFilesReject) {
+        this.uploadFilesReject(err);
+      }
     } finally {
+      this.uploadFilesResolve = null;
+      this.uploadFilesReject = null;
       this.trzszTransfer.cleanup();
       this.textProgressBar = null;
       this.trzszTransfer = null;
@@ -240,7 +330,7 @@ export class TrzszFilter {
     } else {
       savePath = await this.chooseSaveDirectory();
       if (!savePath) {
-        await this.trzszTransfer.sendAction(false, remoteIsWindows);
+        await this.trzszTransfer.sendAction(false, remoteIsWindows, !isRunningInBrowser);
         return;
       }
       nodefs.checkPathWritable(savePath);
@@ -248,7 +338,7 @@ export class TrzszFilter {
       saveParam = { path: savePath, maps: new Map<string, string>() };
     }
 
-    await this.trzszTransfer.sendAction(true, remoteIsWindows);
+    await this.trzszTransfer.sendAction(true, remoteIsWindows, !isRunningInBrowser);
     const config = await this.trzszTransfer.recvConfig();
 
     if (config.quiet !== true) {
@@ -263,10 +353,15 @@ export class TrzszFilter {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private async handleTrzszUploadFiles(version: string, directory: boolean, remoteIsWindows: boolean) {
     let sendFiles;
-    if (isRunningInBrowser) {
+    let supportDir = true;
+    if (this.uploadFilesList) {
+      sendFiles = this.uploadFilesList;
+      this.uploadFilesList = null;
+    } else if (isRunningInBrowser) {
+      supportDir = false;
       if (directory) {
         // The action will send that transferring directories is not supported.
-        await this.trzszTransfer.sendAction(true, remoteIsWindows);
+        await this.trzszTransfer.sendAction(true, remoteIsWindows, supportDir);
         // The receiving configuration should fail.
         await this.trzszTransfer.recvConfig();
         return;
@@ -278,11 +373,11 @@ export class TrzszFilter {
     }
 
     if (!sendFiles || !sendFiles.length) {
-      await this.trzszTransfer.sendAction(false, remoteIsWindows);
+      await this.trzszTransfer.sendAction(false, remoteIsWindows, supportDir);
       return;
     }
 
-    await this.trzszTransfer.sendAction(true, remoteIsWindows);
+    await this.trzszTransfer.sendAction(true, remoteIsWindows, supportDir);
     const config = await this.trzszTransfer.recvConfig();
 
     if (config.overwrite === true) {

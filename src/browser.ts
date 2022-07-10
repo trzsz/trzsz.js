@@ -8,15 +8,19 @@
 
 import { TrzszError, TrzszFileReader, TrzszFileWriter } from "./comm";
 
-class BrowserFileReader implements TrzszFileReader {
+export class BrowserFileReader implements TrzszFileReader {
   private closed: boolean = false;
   private pathId: number;
+  private relPath: string[];
   private file: File | null;
   private pos: number = 0;
+  private dir: boolean;
 
-  constructor(pathId: number, file: File) {
+  constructor(pathId: number, relPath: string[], file: File | null, dir: boolean) {
     this.pathId = pathId;
+    this.relPath = relPath;
     this.file = file;
+    this.dir = dir;
   }
 
   public getPathId(): number {
@@ -24,11 +28,11 @@ class BrowserFileReader implements TrzszFileReader {
   }
 
   public getRelPath(): string[] {
-    return [this.file.name];
+    return this.relPath;
   }
 
   public isDir(): boolean {
-    return false;
+    return this.dir;
   }
 
   public getSize(): number {
@@ -79,7 +83,8 @@ export async function selectSendFiles(): Promise<TrzszFileReader[] | undefined> 
 
   const bfrArray: BrowserFileReader[] = [];
   for (const [idx, fileHandle] of fileHandleArray.entries()) {
-    bfrArray.push(new BrowserFileReader(idx, await fileHandle.getFile()));
+    const file = await fileHandle.getFile();
+    bfrArray.push(new BrowserFileReader(idx, [file.name], file, false));
   }
   return bfrArray;
 }

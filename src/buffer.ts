@@ -6,19 +6,7 @@
 
 /* eslint-disable require-jsdoc */
 
-import { strToUint8, uint8ToStr, TrzszError } from "./comm";
-
-function isVT100End(c: number): boolean {
-  if (0x61 <= c && c <= 0x7a) {
-    // 'a' <= c && c <= 'z'
-    return true;
-  }
-  if (0x41 <= c && c <= 0x5a) {
-    // 'A' <= c && c <= 'Z'
-    return true;
-  }
-  return false;
-}
+import { strToUint8, uint8ToStr, TrzszError, isVT100End } from "./comm";
 
 function isTrzszLetter(c: number): boolean {
   if (0x61 <= c && c <= 0x7a) {

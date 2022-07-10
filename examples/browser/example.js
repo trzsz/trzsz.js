@@ -51,4 +51,14 @@ InitBrowserExample = async (terminal) => {
   window.addEventListener("resize", () => fit.fit());
 
   term.focus();
+
+  // enable drag files or directories to upload
+  terminal.addEventListener("dragover", (event) => event.preventDefault());
+  terminal.addEventListener("drop", (event) => {
+    event.preventDefault();
+    trzsz
+      .uploadFiles(event.dataTransfer.items)
+      .then(() => console.log("upload success"))
+      .catch((err) => console.log(err));
+  });
 };

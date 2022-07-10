@@ -112,6 +112,18 @@ In this case, `lrzsz` ( rz / sz ) is convenient to use, but unfortunately it's n
   });
   ```
 
+* Support dragging files or directories to upload.
+  ```js
+  terminalHtmlElement.addEventListener("dragover", (event) => event.preventDefault());
+  terminalHtmlElement.addEventListener("drop", (event) => {
+    event.preventDefault();
+    trzszFilter
+      .uploadFiles(event.dataTransfer.items)
+      .then(() => console.log("upload success"))
+      .catch((err) => console.log(err));
+  });
+  ```
+
 * `TrzszAddon` is a wrapper for `TrzszFilter`. If you are using [xterm-addon-attach](https://www.npmjs.com/package/xterm-addon-attach), just replace `AttachAddon` with `TrzszAddon`.
   ```js
   import { Terminal } from 'xterm';

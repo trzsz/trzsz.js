@@ -208,12 +208,12 @@ export class TrzszTransfer {
     ]);
   }
 
-  public async sendAction(confirm: boolean, remoteIsWindows: boolean) {
+  public async sendAction(confirm: boolean, remoteIsWindows: boolean, supportDir: boolean) {
     const action: any = {
       lang: "js",
       confirm: confirm,
       version: trzszVersion,
-      support_dir: !isRunningInBrowser,
+      support_dir: supportDir,
     };
     if (this.isWindowsShell) {
       action.binary = false;
