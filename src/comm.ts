@@ -199,9 +199,17 @@ export function stripServerOutput(output: string | ArrayBuffer | Uint8Array | Bl
       buf[idx++] = c;
     }
   }
-  const result = buf.subarray(0, idx);
-  if (result.length > 1024) {
-    return result;
+  while (idx > 0) {
+    const c = buf[idx - 1];
+    if (c != 0x0d && c != 0x0a) {
+      // not \r\n
+      break;
+    }
+    idx--;
   }
-  return String.fromCharCode.apply(null, result).trim();
+  const result = buf.subarray(0, idx);
+  if (result.length > 100) {
+    return output;
+  }
+  return String.fromCharCode.apply(null, result);
 }

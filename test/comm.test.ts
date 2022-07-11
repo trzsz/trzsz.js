@@ -131,6 +131,10 @@ test("strip server output", () => {
   testStripServerOutput("\x1b[29Ctrz\x1b[01;34m\r\n", "trz");
   testStripServerOutput("\x1b[29Ctrz\x1b[01;34m -d\r\n", "trz -d");
 
+  testStripServerOutput("trz\r\n\u001b[?2004l\r", "trz");
+
+  testStripServerOutput("\x08trz ", "\x08trz ");
+
   const b = new Blob(["test"]);
   expect(stripServerOutput(b)).toBe(b);
 

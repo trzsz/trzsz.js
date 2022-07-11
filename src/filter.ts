@@ -87,6 +87,7 @@ export class TrzszFilter {
   private uploadFilesResolve: Function | null = null;
   private uploadFilesReject: Function | null = null;
   private uploadInterrupting: boolean = false;
+  private uploadSkipTrzCommand: boolean = false;
 
   /**
    * Create a trzsz filter to upload and download files.
@@ -127,13 +128,11 @@ export class TrzszFilter {
     if (this.uploadInterrupting) {
       return;
     }
-    if (this.uploadFilesList) {
+    if (this.uploadSkipTrzCommand) {
+      this.uploadSkipTrzCommand = false;
       const out = stripServerOutput(output);
       if (out === "trz" || out === "trz -d") {
         this.writeToTerminal("\r\n");
-        return;
-      }
-      if (out === "" || out === '"') {
         return;
       }
     }
@@ -230,6 +229,7 @@ export class TrzszFilter {
     await new Promise((resolve) => setTimeout(resolve, 200));
     this.uploadInterrupting = false;
 
+    this.uploadSkipTrzCommand = true;
     this.sendToServer(hasDir ? "trz -d\r" : "trz\r");
 
     // cleanup if it's not uploading
