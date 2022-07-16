@@ -21,7 +21,7 @@ function isTrzszLetter(c: number): boolean {
     // '0' <= c && c <= '9'
     return true;
   }
-  if (c == 0x23 || c == 0x3A || c == 0x2B || c == 0x2F || c == 0x3D) {
+  if (c == 0x23 || c == 0x3a || c == 0x2b || c == 0x2f || c == 0x3d) {
     // c == '#' || c == ':' || c == '+' || c == '/' || c == '='
     return true;
   }
@@ -179,6 +179,10 @@ export class TrzszBuffer {
         if (skipVT100) {
           if (isVT100End(c)) {
             skipVT100 = false;
+            // skip the duplicate character, e.g., the "8" in "8\r\n\x1b[25;119H8".
+            if (c == 0x48 && idx > 0 && i + 1 < next.length && buf[idx - 1] == next[i + 1]) {
+              i++
+            }
           }
         } else if (c == 0x1b) {
           skipVT100 = true;

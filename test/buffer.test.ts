@@ -133,6 +133,10 @@ test("read line on windows", async () => {
   expect(await tb.readLineOnWindows()).toBe("ABCdef");
   tb.addBuffer("\x1b[29CAAA\x1b[KBBB" + "C".repeat(200) + "!");
   expect(await tb.readLineOnWindows()).toBe("AAABBB" + "C".repeat(200));
+  tb.addBuffer("\r\n\x1b[90C");
+  tb.addBuffer("#SUCC:eJzy8XR29Qt21TMCBAAA//8");
+  tb.addBuffer("\r\n\x1b[25;119H8MnwJk!\r\n\x1b[6C");
+  expect(await tb.readLineOnWindows()).toBe("#SUCC:eJzy8XR29Qt21TMCBAAA//8MnwJk");
   tb.addBuffer("test\x03message");
   await expect(tb.readLineOnWindows()).rejects.toThrowError("Interrupted");
 });
