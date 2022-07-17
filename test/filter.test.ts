@@ -32,7 +32,15 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  fs.rmSync(tmpDir, { recursive: true });
+  try {
+    fs.rmSync(tmpDir, { recursive: true });
+  } catch (err) {
+    if (process.platform === "win32") {
+      require("child_process").spawn("cmd", ["/c", "rmdir", "/s", "/q", tmpDir]);
+    } else {
+      require("child_process").spawn("rm", ["-rf", tmpDir]);
+    }
+  }
 });
 
 test("find trzsz magic key", async () => {
@@ -165,9 +173,10 @@ test("trz upload files", async () => {
 
   trzsz.processServerOutput("Received test.txt.0 to /tmp\n");
 
-  expect(writeToTerminal.mock.calls.length).toBe(3);
+  expect(writeToTerminal.mock.calls.length).toBe(4);
   expect(writeToTerminal.mock.calls[1][0]).toContain("test.txt [");
-  expect(writeToTerminal.mock.calls[2][0]).toBe("Received test.txt.0 to /tmp\n");
+  expect(writeToTerminal.mock.calls[2][0]).toBe("\r");
+  expect(writeToTerminal.mock.calls[3][0]).toBe("Received test.txt.0 to /tmp\n");
 });
 
 test("tsz download files", async () => {
@@ -214,9 +223,10 @@ test("tsz download files", async () => {
 
   trzsz.processServerOutput("Saved test.txt.0 to /tmp\n");
 
-  expect(writeToTerminal.mock.calls.length).toBe(3);
+  expect(writeToTerminal.mock.calls.length).toBe(4);
   expect(writeToTerminal.mock.calls[1][0]).toContain("test.txt [");
-  expect(writeToTerminal.mock.calls[2][0]).toBe("Saved test.txt.0 to /tmp\n");
+  expect(writeToTerminal.mock.calls[2][0]).toBe("\r");
+  expect(writeToTerminal.mock.calls[3][0]).toBe("Saved test.txt.0 to /tmp\n");
 
   expect(fs.readFileSync(path.join(tmpDir, "test.txt.0")).toString()).toBe("test content\n");
 });
@@ -245,7 +255,7 @@ test("stop transferring files", async () => {
   await sleep(100);
   trzsz.processTerminalInput("\x03");
 
-  await sleep(100);
+  await sleep(600);
   expect(chooseSaveDirectory.mock.calls.length).toBe(1);
 
   expect(sendToServer.mock.calls.length).toBe(3);
@@ -368,9 +378,10 @@ test("trz upload files in browser", async () => {
 
   trzsz.processServerOutput("Received test.txt.0 to /tmp\n");
 
-  expect(writeToTerminal.mock.calls.length).toBe(3);
+  expect(writeToTerminal.mock.calls.length).toBe(4);
   expect(writeToTerminal.mock.calls[1][0]).toContain("test.txt [");
-  expect(writeToTerminal.mock.calls[2][0]).toBe("Received test.txt.0 to /tmp\n");
+  expect(writeToTerminal.mock.calls[2][0]).toBe("\r");
+  expect(writeToTerminal.mock.calls[3][0]).toBe("Received test.txt.0 to /tmp\n");
 
   selectSendFiles.mockRestore();
 });
@@ -430,9 +441,10 @@ test("tsz download files in browser", async () => {
 
   trzsz.processServerOutput("Saved test.txt.0 to /tmp\n");
 
-  expect(writeToTerminal.mock.calls.length).toBe(3);
+  expect(writeToTerminal.mock.calls.length).toBe(4);
   expect(writeToTerminal.mock.calls[1][0]).toContain("test.txt [");
-  expect(writeToTerminal.mock.calls[2][0]).toBe("Saved test.txt.0 to /tmp\n");
+  expect(writeToTerminal.mock.calls[2][0]).toBe("\r");
+  expect(writeToTerminal.mock.calls[3][0]).toBe("Saved test.txt.0 to /tmp\n");
 
   expect(file.closeFile.mock.calls.length).toBeGreaterThanOrEqual(1);
   expect(file.getLocalName.mock.calls.length).toBeGreaterThanOrEqual(1);
@@ -503,9 +515,10 @@ test("require user permission in browser", async () => {
 
   trzsz.processServerOutput("Saved test.txt.0 to /tmp\n");
 
-  expect(writeToTerminal.mock.calls.length).toBe(3);
+  expect(writeToTerminal.mock.calls.length).toBe(4);
   expect(writeToTerminal.mock.calls[1][0]).toContain("test.txt [");
-  expect(writeToTerminal.mock.calls[2][0]).toBe("Saved test.txt.0 to /tmp\n");
+  expect(writeToTerminal.mock.calls[2][0]).toBe("\r");
+  expect(writeToTerminal.mock.calls[3][0]).toBe("Saved test.txt.0 to /tmp\n");
 
   expect(mockFileStream.write.mock.calls.length).toBe(1);
   expect(mockFileStream.write.mock.calls[0][0]).toStrictEqual(strToUint8("test content\n"));

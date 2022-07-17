@@ -14,6 +14,14 @@ export const trzszVersion = "[VersionInject]{version}[/VersionInject]";
 
 /* eslint-disable require-jsdoc */
 
+export const isRunningInWindows = (function () {
+  try {
+    return process.platform === "win32";
+  } catch (err) {
+    return false;
+  }
+})();
+
 export const isRunningInBrowser = (function () {
   try {
     if (require.resolve("fs") === "fs") {
@@ -212,4 +220,64 @@ export function stripServerOutput(output: string | ArrayBuffer | Uint8Array | Bl
     return output;
   }
   return String.fromCharCode.apply(null, result);
+}
+
+export const TmuxMode = {
+  NoTmux: 0,
+  TmuxNormalMode: 1,
+  TmuxControlMode: 2,
+};
+
+export async function checkTmux() {
+  const stdoutWriter = (data: string | Uint8Array) => process.stdout.write(data);
+  if (!process.env.TMUX) {
+    return [TmuxMode.NoTmux, stdoutWriter, -1];
+  }
+
+  const exec = require("util").promisify(require("child_process").exec);
+  const out = await exec("tmux display-message -p '#{client_tty}:#{client_control_mode}:#{pane_width}'");
+  const output = out.stdout.trim();
+  const tokens = output.split(":");
+  if (tokens.length != 3) {
+    throw new TrzszError(`tmux unexpect output: ${output}`);
+  }
+
+  const fs = require("fs");
+  const [tmuxTty, controlMode, paneWidth] = tokens;
+  if (controlMode == "1" || !tmuxTty.startsWith("/") || !fs.existsSync(tmuxTty)) {
+    return [TmuxMode.TmuxControlMode, stdoutWriter, -1];
+  }
+
+  const fd = fs.openSync(tmuxTty, "w");
+  const tmuxRealWriter = (data: string | Uint8Array) => fs.writeSync(fd, data);
+  return [TmuxMode.TmuxNormalMode, tmuxRealWriter, parseInt(paneWidth, 10)];
+}
+
+export function getTerminalColumns() {
+  return process.stdout.columns;
+}
+
+let originalTtyMode = "";
+
+export async function setStdinRaw() {
+  if (!isRunningInWindows) {
+    const spawn = require("child_process").spawn;
+    const child = spawn("stty", ["-g"], { stdio: ["inherit", "pipe", "pipe"] });
+    child.stdout.on("data", (data) => {
+      originalTtyMode += data.toString();
+    });
+    await new Promise((resolve) => child.on("exit", resolve));
+    originalTtyMode = originalTtyMode.trim();
+
+    await new Promise((resolve) => spawn("stty", ["raw"], { stdio: "inherit" }).on("exit", resolve));
+  }
+  process.stdin.setRawMode(true);
+}
+
+export async function resetStdinTty() {
+  process.stdin.setRawMode(false);
+  if (originalTtyMode && originalTtyMode.length) {
+    const child = require("child_process").spawn("stty", [originalTtyMode], { stdio: "inherit" });
+    await new Promise((resolve) => child.on("exit", resolve));
+  }
 }

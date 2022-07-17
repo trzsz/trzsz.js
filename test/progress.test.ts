@@ -223,14 +223,16 @@ test("progress bar multiple files", () => {
   tgb.setTerminalColumns(80);
   tgb.onStep(300);
   tgb.onDone();
-  expect(writer.mock.calls.length).toBe(2);
+  expect(writer.mock.calls.length).toBe(4);
   expect(dateNowSpy.mock.calls.length).toBe(4);
   expect(writer.mock.calls[0][0]).toContain("(1/2) 中文😀test.txt [");
   expect(writer.mock.calls[0][0]).toContain("] 10% | 100B | 100B/s | 00:09 ETA");
   expect(outputLength(writer.mock.calls[0][0])).toBe(100);
-  expect(writer.mock.calls[1][0]).toContain("(2/2) 英文😀test.txt [");
-  expect(writer.mock.calls[1][0]).toContain("] 15% | 300B | 150B/s | 00:11 ETA");
-  expect(outputLength(writer.mock.calls[1][0])).toBe(80);
+  expect(writer.mock.calls[1][0]).toBe("\r");
+  expect(writer.mock.calls[2][0]).toContain("(2/2) 英文😀test.txt [");
+  expect(writer.mock.calls[2][0]).toContain("] 15% | 300B | 150B/s | 00:11 ETA");
+  expect(outputLength(writer.mock.calls[2][0])).toBe(80);
+  expect(writer.mock.calls[3][0]).toBe("\r");
 });
 
 test("progress bar in tmux pane", () => {

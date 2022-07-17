@@ -29,7 +29,15 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  fs.rmSync(tmpDir, { recursive: true });
+  try {
+    fs.rmSync(tmpDir, { recursive: true });
+  } catch (err) {
+    if (process.platform === "win32") {
+      require("child_process").spawn("cmd", ["/c", "rmdir", "/s", "/q", tmpDir]);
+    } else {
+      require("child_process").spawn("rm", ["-rf", tmpDir]);
+    }
+  }
 });
 
 test("require fs and path", () => {
@@ -56,7 +64,7 @@ test("check paths readable", () => {
   expect(() => checkPathsReadable([tmpDir])).toThrowError("Is a directory");
   expect(() => checkPathsReadable([tmpFile, tmpDir])).toThrowError("Is a directory");
 
-  if (process.platform !== "win32") {
+  if (process.platform !== "win32" && require("os").userInfo().uid != 0) {
     expect(() => checkPathsReadable(["/dev/stdin"])).toThrowError("Not a regular file");
     expect(() => checkPathsReadable([tmpFile, "/dev/stdin"])).toThrowError("Not a regular file");
 
@@ -76,7 +84,7 @@ test("check path writable", () => {
   expect(() => checkPathWritable(notExistFile)).toThrowError("No such directory");
   expect(() => checkPathWritable(tmpFile)).toThrowError("Not a directory");
 
-  if (process.platform !== "win32") {
+  if (process.platform !== "win32" && require("os").userInfo().uid != 0) {
     fs.chmodSync(tmpDir, 0o444);
     expect(() => checkPathWritable(tmpDir)).toThrowError("No permission to write");
     fs.chmodSync(tmpDir, 0o777);
@@ -145,7 +153,7 @@ test("open save file success", async () => {
 
 test("open save file error", async () => {
   const saveParam = { path: tmpDir, maps: new Map<string, string>() };
-  if (process.platform !== "win32") {
+  if (process.platform !== "win32" && require("os").userInfo().uid != 0) {
     fs.chmodSync(tmpDir, 0o444);
     await expect(openSaveFile(saveParam, "error.txt", false, false)).rejects.toThrowError("No permission to write");
     fs.chmodSync(tmpDir, 0o777);

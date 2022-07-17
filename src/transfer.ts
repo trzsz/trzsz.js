@@ -9,10 +9,11 @@ import { TrzszBuffer } from "./buffer";
 import { escapeCharsToCodes, escapeData, unescapeData } from "./escape";
 import {
   trzszVersion,
-  isRunningInBrowser,
   uint8ToStr,
   encodeBuffer,
   decodeBuffer,
+  resetStdinTty,
+  TmuxMode,
   TrzszError,
   TrzszFile,
   OpenSaveFile,
@@ -62,9 +63,7 @@ export class TrzszTransfer {
   private async cleanInput(timeoutInMilliseconds: number) {
     this.stopped = true;
     this.buffer.drainBuffer();
-    if (this.lastInputTime == 0) {
-      return;
-    }
+    this.lastInputTime = Date.now();
     while (true) {
       const sleepTime = timeoutInMilliseconds - (Date.now() - this.lastInputTime);
       if (sleepTime <= 0) {
@@ -234,12 +233,36 @@ export class TrzszTransfer {
     return action;
   }
 
-  public async sendConfig() {
-    this.transferConfig = { lang: "js" };
-    let jsonStr = JSON.stringify(this.transferConfig);
+  public async sendConfig(args: any, escapeChars: Array<string[]>, tmuxMode: number, tmuxPaneWidth: number) {
+    const config: any = { lang: "js" };
+    if (args.quiet) {
+      config.quiet = true;
+    }
+    if (args.binary) {
+      config.binary = true;
+      config.escape_chars = escapeChars;
+    }
+    if (args.directory) {
+      config.directory = true;
+    }
+    if (args.bufsize) {
+      config.bufsize = args.bufsize;
+    }
+    if (args.timeout) {
+      config.timeout = args.timeout;
+    }
+    if (args.overwrite) {
+      config.overwrite = true;
+    }
+    if (tmuxMode == TmuxMode.TmuxNormalMode) {
+      config.tmux_output_junk = true;
+      config.tmux_pane_width = tmuxPaneWidth;
+    }
+    let jsonStr = JSON.stringify(config);
     jsonStr = jsonStr.replace(/[\u007F-\uFFFF]/g, function (chr) {
       return "\\u" + ("0000" + chr.charCodeAt(0).toString(16)).substr(-4);
     });
+    this.transferConfig = config;
     await this.sendString("CFG", jsonStr);
   }
 
@@ -252,6 +275,18 @@ export class TrzszTransfer {
 
   public async clientExit(msg: string) {
     await this.sendString("EXIT", msg);
+  }
+
+  public async recvExit() {
+    return this.recvString("EXIT");
+  }
+
+  public async serverExit(msg: string) {
+    await this.cleanInput(500);
+    await resetStdinTty();
+    process.stdout.write("\x1b8\x1b[0J");
+    process.stdout.write(msg);
+    process.stdout.write("\n");
   }
 
   public async clientError(err: Error) {
@@ -276,6 +311,23 @@ export class TrzszTransfer {
     if (trace) {
       console.log(errMsg);
     }
+  }
+
+  public async serverError(err: Error) {
+    await this.cleanInput(this.cleanTimeoutInMilliseconds);
+
+    const errMsg = TrzszError.getErrorMessage(err);
+    let trace = true;
+    if (err instanceof TrzszError) {
+      trace = err.isTraceBack();
+      if (err.isRemoteExit() || err.isRemoteFail()) {
+        await this.serverExit(errMsg);
+        return;
+      }
+    }
+
+    await this.sendString(trace ? "FAIL" : "fail", errMsg);
+    await this.serverExit(errMsg);
   }
 
   private async sendFileNum(num: number, progressCallback: ProgressCallback) {

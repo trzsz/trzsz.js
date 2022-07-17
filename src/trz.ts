@@ -6,9 +6,22 @@
 
 export {};
 
-import { trzszVersion } from "./comm";
+const path = require("path");
+import * as nodefs from "./nodefs";
 import { BufferSizeParser } from "./args";
+import { getEscapeChars } from "./escape";
+import { TrzszTransfer } from "./transfer";
 import { ArgumentParser, RawTextHelpFormatter } from "argparse";
+import {
+  trzszVersion,
+  isRunningInWindows,
+  checkTmux,
+  getTerminalColumns,
+  setStdinRaw,
+  resetStdinTty,
+  TmuxMode,
+  TrzszError,
+} from "./comm";
 
 /* eslint-disable require-jsdoc */
 
@@ -44,32 +57,94 @@ function parseArgs() {
   return parser.parse_args();
 }
 
+async function recvFiles(transfer: TrzszTransfer, args: any, tmuxMode: number, tmuxPaneWidth: number) {
+  try {
+    const action = await transfer.recvAction();
+
+    if (action.confirm !== true) {
+      await transfer.serverExit("Cancelled");
+      return;
+    }
+
+    // check if the client doesn't support binary mode
+    if (action.binary === false && args.binary) {
+      args.binary = false;
+    }
+    // check if the client doesn't support transfer directory
+    if (args.directory && action.support_dir !== true) {
+      throw new TrzszError("The client doesn't support transfer directory");
+    }
+
+    const escapeChars = getEscapeChars(args.escape);
+    await transfer.sendConfig(args, escapeChars, tmuxMode, tmuxPaneWidth);
+
+    const saveParam = { path: args.path, maps: new Map<string, string>() };
+    const localNames = await transfer.recvFiles(saveParam, nodefs.openSaveFile, null);
+
+    await transfer.recvExit();
+    await transfer.serverExit(`Received ${localNames.join(", ")} to ${args.path}`);
+  } catch (err) {
+    await transfer.serverError(err);
+  } finally {
+    transfer.cleanup();
+  }
+}
+
 /**
  * trz main entry
  */
-function main() {
+async function main() {
   const args = parseArgs();
-  console.dir(args);
+
+  try {
+    args.path = path.resolve(args.path);
+    nodefs.checkPathWritable(args.path);
+
+    const [tmuxMode, realStdoutWriter, tmuxPaneWidth] = await checkTmux();
+
+    if (args.binary && tmuxMode !== TmuxMode.NoTmux) {
+      process.stdout.write("Binary upload in tmux is not supported, auto switch to base64 mode.\n");
+      args.binary = false;
+    }
+    if (args.binary && isRunningInWindows) {
+      process.stdout.write("Binary upload on Windows is not supported, auto switch to base64 mode.\n");
+      args.binary = false;
+    }
+
+    let uniqueId = "0";
+    if (tmuxMode === TmuxMode.TmuxNormalMode) {
+      const columns = getTerminalColumns();
+      if (columns > 0 && columns < 40) {
+        process.stdout.write("\n\n\x1b[2A\x1b[0J");
+      } else {
+        process.stdout.write("\n\x1b[1A\x1b[0J");
+      }
+      uniqueId = Date.now().toString().split("").reverse().join("");
+    }
+    if (isRunningInWindows) {
+      uniqueId = "1";
+    }
+
+    const mode = args.directory ? "D" : "R";
+    process.stdout.write(`\x1b7\x07::TRZSZ:TRANSFER:${mode}:${trzszVersion}:${uniqueId}\n`);
+
+    const transfer = new TrzszTransfer(realStdoutWriter as any, isRunningInWindows);
+
+    await setStdinRaw();
+    process.stdin.on("data", (data) => {
+      transfer.addReceivedData(data);
+    });
+
+    process.on("SIGINT", () => transfer.stopTransferring());
+    process.on("SIGTERM", () => transfer.stopTransferring());
+    process.on("SIGBREAK", () => transfer.stopTransferring());
+
+    await recvFiles(transfer, args, tmuxMode as number, tmuxPaneWidth as number);
+  } catch (err) {
+    console.log(TrzszError.getErrorMessage(err));
+  } finally {
+    await resetStdinTty();
+  }
 }
 
-main();
-
-// redirect to the python version
-console.log(
-  "\nThe Node.js version is under development.\n" +
-    "Please use the Python version instead.\n" +
-    "GitHub: https://github.com/trzsz/trzsz\n"
-);
-
-const bin = "/usr/local/bin/trz";
-const fs = require("fs");
-if (!fs.existsSync(bin)) {
-  process.exit();
-}
-const script = fs.readFileSync(bin, "utf-8");
-if (script.startsWith("#!/usr/bin/env node")) {
-  process.exit();
-}
-
-const { spawnSync } = require("child_process");
-spawnSync(bin, process.argv.slice(2), { stdio: "inherit" });
+main().finally(() => process.exit(0));

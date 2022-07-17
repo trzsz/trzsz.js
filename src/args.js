@@ -28,8 +28,8 @@ export class BufferSizeParser extends argparse.Action {
       throw new TypeError(`invalid size ${value}`);
     }
     const sizeValue = parseInt(match[1]);
-    const unitSuffix = match[2]?.toLowerCase();
-    if (!unitSuffix || unitSuffix == "b") {
+    const unitSuffix = match.length > 2 && match[2] ? match[2].toLowerCase() : "";
+    if (!unitSuffix || !unitSuffix.length || unitSuffix == "b") {
       return sizeValue;
     }
     if (unitSuffix == "k" || unitSuffix == "kb") {

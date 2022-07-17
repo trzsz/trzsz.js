@@ -254,6 +254,14 @@ export class TextProgressBar implements ProgressCallback {
     return "[\u001b[36m" + "\u2588".repeat(complete) + "\u2591".repeat(total - complete) + "\u001b[0m]";
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public onDone() {}
+  public onDone() {
+    if (!this.firstWrite) {
+      if (this.tmuxPaneColumns > 0) {
+        this.writer(`\x1b[${this.columns}D`);
+      } else {
+        this.writer("\r");
+      }
+      this.firstWrite = true;
+    }
+  }
 }

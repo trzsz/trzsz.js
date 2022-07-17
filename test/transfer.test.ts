@@ -4,9 +4,9 @@
  * @license MIT
  */
 
-import { strToUint8, TrzszError } from "../src/comm";
 import { getEscapeChars } from "../src/escape";
 import { TrzszTransfer } from "../src/transfer";
+import { strToUint8, uint8ToStr, decodeBuffer, TmuxMode, TrzszError } from "../src/comm";
 
 /* eslint-disable require-jsdoc */
 
@@ -541,11 +541,42 @@ test("send config to remote", async () => {
   const writer = jest.fn();
   const trzsz = new TrzszTransfer(writer);
 
-  await trzsz.sendConfig();
+  await trzsz.sendConfig({}, getEscapeChars(false), TmuxMode.NoTmux, -1);
 
   expect(writer.mock.calls.length).toBe(1);
-  expect(writer.mock.calls[0][0]).toContain("#CFG:");
+  expect(writer.mock.calls[0][0]).toBe("#CFG:eJyrVspJzEtXslLKKlaqBQAeHgQ6\n");
   expect((trzsz as any).transferConfig.lang).toBe("js");
+
+  const args = {
+    quiet: true,
+    binary: true,
+    directory: true,
+    bufsize: 100,
+    timeout: 200,
+    overwrite: true,
+  };
+  await trzsz.sendConfig(args, getEscapeChars(true), TmuxMode.TmuxNormalMode, 50);
+  expect(writer.mock.calls.length).toBe(2);
+  expect(writer.mock.calls[1][0]).toContain("#CFG:");
+  expect((trzsz as any).transferConfig.bufsize).toBe(100);
+  const cfgOut = writer.mock.calls[1][0];
+  const cfgStr = await uint8ToStr(decodeBuffer(cfgOut.substring(5, cfgOut.length - 1)));
+  expect(cfgStr).toContain('["\\u00ee","\\u00ee\\u00ee"]');
+  expect(cfgStr).toContain('["~","\\u00ee1"]');
+  expect(cfgStr).toContain('["\\u0002","\\u00eeA"]');
+  expect(cfgStr).toContain('["\\u0010","\\u00eeB"]');
+  expect(cfgStr).toContain('["\\u001b","\\u00eeC"]');
+  expect(cfgStr).toContain('["\\u001d","\\u00eeD"]');
+  expect(cfgStr).toContain('["\\u009d","\\u00eeE"]');
+  const config = JSON.parse(cfgStr);
+  expect(config.quiet).toBe(true);
+  expect(config.binary).toBe(true);
+  expect(config.directory).toBe(true);
+  expect(config.bufsize).toBe(100);
+  expect(config.timeout).toBe(200);
+  expect(config.overwrite).toBe(true);
+  expect(config.tmux_output_junk).toBe(true);
+  expect(config.tmux_pane_width).toBe(50);
 });
 
 test("receive invalid data", async () => {
