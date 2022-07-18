@@ -37,14 +37,18 @@ export function strToUint8(str: string): Uint8Array {
   return Uint8Array.from(str, (v) => v.charCodeAt(0));
 }
 
-export async function uint8ToStr(buf: Uint8Array): Promise<string> {
+export async function uint8ToStr(buf: Uint8Array, encoding: BufferEncoding = "binary"): Promise<string> {
   if (typeof Buffer === "function") {
-    return Buffer.from(buf).toString("latin1");
+    return Buffer.from(buf).toString(encoding);
   }
   return new Promise<string>((resolve) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve(reader.result as string);
-    reader.readAsBinaryString(new Blob([buf]));
+    if (encoding == "binary") {
+      reader.readAsBinaryString(new Blob([buf]));
+    } else {
+      reader.readAsText(new Blob([buf]), encoding);
+    }
   });
 }
 

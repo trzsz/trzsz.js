@@ -560,7 +560,7 @@ test("send config to remote", async () => {
   expect(writer.mock.calls[1][0]).toContain("#CFG:");
   expect((trzsz as any).transferConfig.bufsize).toBe(100);
   const cfgOut = writer.mock.calls[1][0];
-  const cfgStr = await uint8ToStr(decodeBuffer(cfgOut.substring(5, cfgOut.length - 1)));
+  const cfgStr = await uint8ToStr(decodeBuffer(cfgOut.substring(5, cfgOut.length - 1)), "utf8");
   expect(cfgStr).toContain('["\\u00ee","\\u00ee\\u00ee"]');
   expect(cfgStr).toContain('["~","\\u00ee1"]');
   expect(cfgStr).toContain('["\\u0002","\\u00eeA"]');

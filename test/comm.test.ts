@@ -35,11 +35,13 @@ test("string and Uint8Array transform", async () => {
   const str2 = "\xAB\xCD\xEF\xFE\xDC\xBA\x80\x81\x82\x83\x84";
   expect(await uint8ToStr(strToUint8(str1))).toBe(str1);
   expect(await uint8ToStr(strToUint8(str2))).toBe(str2);
+  expect(await uint8ToStr(strToUint8("\xE4\xB8\xAD\xE6\x96\x87UTF8"), "utf8")).toBe("中文UTF8");
   const buffer = global.Buffer;
   global.Buffer = undefined;
   try {
     expect(await uint8ToStr(strToUint8(str1))).toBe(str1);
     expect(await uint8ToStr(strToUint8(str2))).toBe(str2);
+    expect(await uint8ToStr(strToUint8("\xE4\xB8\xAD\xE6\x96\x87UTF8"), "utf8")).toBe("中文UTF8");
   } finally {
     global.Buffer = buffer;
   }

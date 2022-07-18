@@ -146,7 +146,7 @@ export class TrzszTransfer {
 
   private async recvString(typ: string, mayHasJunk: boolean = false) {
     const buf = await this.recvCheck(typ, mayHasJunk);
-    return uint8ToStr(decodeBuffer(buf));
+    return uint8ToStr(decodeBuffer(buf), "utf8");
   }
 
   private async checkString(expect: string) {

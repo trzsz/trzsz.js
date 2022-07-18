@@ -286,7 +286,7 @@ test("cancel upload files", async () => {
   expect(sendToServer.mock.calls.length).toBe(1);
   const data = sendToServer.mock.calls[0][0];
   expect(data).toContain("#ACT:");
-  const action = JSON.parse(await uint8ToStr(decodeBuffer(data.substring(5, data.length - 1))));
+  const action = JSON.parse(await uint8ToStr(decodeBuffer(data.substring(5, data.length - 1)), "utf8"));
   expect(action.confirm).toBe(false);
 });
 
@@ -312,7 +312,7 @@ test("cancel download files", async () => {
   expect(sendToServer.mock.calls.length).toBe(1);
   const data = sendToServer.mock.calls[0][0];
   expect(data).toContain("#ACT:");
-  const action = JSON.parse(await uint8ToStr(decodeBuffer(data.substring(5, data.length - 1))));
+  const action = JSON.parse(await uint8ToStr(decodeBuffer(data.substring(5, data.length - 1)), "utf8"));
   expect(action.confirm).toBe(false);
 });
 
