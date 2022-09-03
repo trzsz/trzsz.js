@@ -257,6 +257,9 @@ export class TrzszFilter {
     if (uniqueId.length < 8) {
       return false;
     }
+    if (!this.isWindowsShell && uniqueId.length == 14 && uniqueId.endsWith("00")) {
+      return false;
+    }
     if (this.uniqueIdMaps.has(uniqueId)) {
       return true;
     }
@@ -291,7 +294,10 @@ export class TrzszFilter {
 
     const mode = found[1];
     const version = found[2];
-    const remoteIsWindows = uniqueId == ":1";
+    let remoteIsWindows = false;
+    if (uniqueId == ":1" || (uniqueId.length == 14 && uniqueId.endsWith("10"))) {
+      remoteIsWindows = true;
+    }
 
     try {
       this.trzszTransfer = new TrzszTransfer(this.sendToServer, this.isWindowsShell);

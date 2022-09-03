@@ -111,18 +111,19 @@ async function main() {
       args.binary = false;
     }
 
-    let uniqueId = "0";
-    if (tmuxMode === TmuxMode.TmuxNormalMode) {
+    let uniqueId = (Date.now() % 10e10).toString();
+    if (isRunningInWindows) {
+      uniqueId += "10";
+    } else if (tmuxMode === TmuxMode.TmuxNormalMode) {
       const columns = getTerminalColumns();
       if (columns > 0 && columns < 40) {
         process.stdout.write("\n\n\x1b[2A\x1b[0J");
       } else {
         process.stdout.write("\n\x1b[1A\x1b[0J");
       }
-      uniqueId = Date.now().toString().split("").reverse().join("");
-    }
-    if (isRunningInWindows) {
-      uniqueId = "1";
+      uniqueId += "20";
+    } else {
+      uniqueId += "00";
     }
 
     const mode = args.directory ? "D" : "R";
