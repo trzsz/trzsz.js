@@ -66,6 +66,50 @@ test("progress bar having speed and eta", () => {
   expect(outputLength(writer.mock.calls[0][0])).toBe(100);
 });
 
+test("progress bar newest speed", () => {
+  let now = 1646564135000;
+  for (let i = 0; i < 36; i++) {
+    dateNowSpy.mockReturnValueOnce(now + i * 1000);
+  }
+  const writer = jest.fn();
+  const tgb = new TextProgressBar(writer, 100);
+  tgb.onNum(1);
+  tgb.onName("中文😀test.txt");
+  tgb.onSize(100000);
+  let step = 100;
+  for (let i = 0; i < 35; i++) {
+    step += i * 10;
+    tgb.onStep(step);
+  }
+  expect(writer.mock.calls.length).toBe(35);
+  expect(dateNowSpy.mock.calls.length).toBe(36);
+  let total = 100;
+  for (let i = 0; i < 35; i++) {
+    total += i * 10;
+    const percentage = Math.round((total * 100) / 100000);
+    let speed;
+    if (i < 10) {
+      speed = total / (i + 1);
+    } else {
+      let t = 0;
+      for (let j = i - 10 + 1; j <= i; j++) {
+        t += j * 10;
+      }
+      speed = t / 10;
+    }
+    const totalStr = total >= 1024 ? (total / 1024).toFixed(2) + "K" : total.toFixed(0);
+    const speedStr = speed >= 100 ? speed.toFixed(0) : speed.toFixed(1);
+    const eta = Math.round((100000 - total) / speed);
+    const minute = Math.floor(eta / 60).toString();
+    const second = Math.round(eta % 60).toString();
+    expect(writer.mock.calls[i][0]).toContain("中文😀test.txt [");
+    expect(writer.mock.calls[i][0]).toContain(
+      `] ${percentage}% | ${totalStr}B | ${speedStr}B/s | ${minute.padStart(2, "0")}:${second.padStart(2, "0")} ETA`
+    );
+    expect(outputLength(writer.mock.calls[i][0])).toBe(100);
+  }
+});
+
 test("progress bar ouput once only", () => {
   dateNowSpy.mockReturnValueOnce(1646564135000).mockReturnValueOnce(1646564135001).mockReturnValueOnce(1646564135099);
   const writer = jest.fn();
@@ -240,36 +284,45 @@ test("progress bar in tmux pane", () => {
     .mockReturnValueOnce(1646564135000)
     .mockReturnValueOnce(1646564136000)
     .mockReturnValueOnce(1646564137000)
-    .mockReturnValueOnce(1646564138000);
+    .mockReturnValueOnce(1646564138000)
+    .mockReturnValueOnce(1646564139000);
   const writer = jest.fn();
   const tgb = new TextProgressBar(writer, 100, 80);
-  tgb.onNum(1);
+  tgb.onNum(2);
   tgb.onName("中文😀test.txt");
   tgb.onSize(1000);
   tgb.onStep(100);
   tgb.onStep(200);
+  tgb.onDone();
   tgb.setTerminalColumns(120);
+  tgb.onName("中文😀test2.txt");
+  tgb.onSize(1000);
   tgb.onStep(300);
+  tgb.onDone();
 
-  expect(writer.mock.calls.length).toBe(3);
-  expect(dateNowSpy.mock.calls.length).toBe(4);
+  expect(writer.mock.calls.length).toBe(5);
+  expect(dateNowSpy.mock.calls.length).toBe(5);
   expect(writer.mock.calls[0][0]).not.toContain("\r");
   expect(writer.mock.calls[0][0]).not.toContain("\x1b[79D");
-  expect(writer.mock.calls[0][0]).toContain("中文😀test.txt [");
+  expect(writer.mock.calls[0][0]).toContain("(1/2) 中文😀test.txt [");
   expect(writer.mock.calls[0][0]).toContain("] 10% | 100B | 100B/s | 00:09 ETA");
   expect(outputLength(writer.mock.calls[0][0])).toBe(79);
 
   expect(writer.mock.calls[1][0]).not.toContain("\r");
   expect(writer.mock.calls[1][0]).toContain("\x1b[79D");
-  expect(writer.mock.calls[1][0]).toContain("中文😀test.txt [");
+  expect(writer.mock.calls[1][0]).toContain("(1/2) 中文😀test.txt [");
   expect(writer.mock.calls[1][0]).toContain("] 20% | 200B | 100B/s | 00:08 ETA");
   expect(outputLength(writer.mock.calls[1][0])).toBe(79);
 
-  expect(writer.mock.calls[2][0]).toContain("\r");
-  expect(writer.mock.calls[2][0]).not.toContain("\x1b[79D");
-  expect(writer.mock.calls[2][0]).toContain("中文😀test.txt [");
-  expect(writer.mock.calls[2][0]).toContain("] 30% | 300B | 100B/s | 00:07 ETA");
-  expect(outputLength(writer.mock.calls[2][0])).toBe(120);
+  expect(writer.mock.calls[2][0]).not.toContain("\r");
+  expect(writer.mock.calls[2][0]).toContain("\x1b[79D");
+
+  expect(writer.mock.calls[3][0]).toContain("(2/2) 中文😀test2.txt [");
+  expect(writer.mock.calls[3][0]).toContain("] 30% | 300B | 300B/s | 00:02 ETA");
+  expect(outputLength(writer.mock.calls[3][0])).toBe(120);
+
+  expect(writer.mock.calls[4][0]).toContain("\r");
+  expect(writer.mock.calls[4][0]).not.toContain("\x1b[79D");
 });
 
 test("get substring with max length", () => {

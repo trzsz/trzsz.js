@@ -34,7 +34,7 @@ export function getEllipsisString(str: string, max: number) {
 }
 
 function convertSizeToString(size: number): string {
-  if (!isFinite(size)) {
+  if (size < 0) {
     return "NaN";
   }
 
@@ -75,7 +75,7 @@ function convertSizeToString(size: number): string {
 }
 
 function convertTimeToString(seconds: number) {
-  if (!isFinite(seconds)) {
+  if (seconds < 0) {
     return "NaN";
   }
 
@@ -95,6 +95,8 @@ function convertTimeToString(seconds: number) {
   return result;
 }
 
+const kSpeedArraySize: number = 10;
+
 export class TextProgressBar implements ProgressCallback {
   private writer: (output: string) => void;
   private lastUpdateTime: number = 0;
@@ -107,6 +109,10 @@ export class TextProgressBar implements ProgressCallback {
   private startTime: number;
   private tmuxPaneColumns: number;
   private firstWrite: boolean = true;
+  private speedCnt: number = 0;
+  private speedIdx: number = 0;
+  private timeArray: number[] = new Array(kSpeedArraySize);
+  private stepArray: number[] = new Array(kSpeedArraySize);
 
   public constructor(
     writer: (output: string) => void,
@@ -136,6 +142,10 @@ export class TextProgressBar implements ProgressCallback {
     this.fileName = name;
     this.fileIdx += 1;
     this.startTime = Date.now();
+    this.timeArray[0] = this.startTime;
+    this.stepArray[0] = 0;
+    this.speedCnt = 1;
+    this.speedIdx = 1;
   }
 
   public onSize(size: number) {
@@ -159,11 +169,11 @@ export class TextProgressBar implements ProgressCallback {
     }
     const percentage = Math.round((this.fileStep * 100) / this.fileSize).toString() + "%";
     const total = convertSizeToString(this.fileStep);
-    const speed = convertSizeToString((this.fileStep * 1000) / (now - this.startTime)) + "/s";
-    const leftTime = ((this.fileSize - this.fileStep) * (now - this.startTime)) / this.fileStep / 1000;
-    const eta = convertTimeToString(leftTime) + " ETA";
+    const speed = this.getSpeed(now);
+    const speedStr = convertSizeToString(speed) + "/s";
+    const eta = convertTimeToString(Math.round((this.fileSize - this.fileStep) / speed)) + " ETA";
 
-    const progressText = this.getProgressText(percentage, total, speed, eta);
+    const progressText = this.getProgressText(percentage, total, speedStr, eta);
 
     if (this.firstWrite) {
       this.firstWrite = false;
@@ -176,6 +186,26 @@ export class TextProgressBar implements ProgressCallback {
     } else {
       this.writer(`\r${progressText}`);
     }
+  }
+
+  private getSpeed(now: number): number {
+    let speed;
+    if (this.speedCnt <= kSpeedArraySize) {
+      this.speedCnt++;
+      speed = ((this.fileStep - this.stepArray[0]) * 1000) / (now - this.timeArray[0]);
+    } else {
+      speed = ((this.fileStep - this.stepArray[this.speedIdx]) * 1000) / (now - this.timeArray[this.speedIdx]);
+    }
+
+    this.timeArray[this.speedIdx] = now;
+    this.stepArray[this.speedIdx] = this.fileStep;
+
+    this.speedIdx++;
+    if (this.speedIdx >= kSpeedArraySize) {
+      this.speedIdx %= kSpeedArraySize;
+    }
+
+    return isFinite(speed) ? speed : -1;
   }
 
   private getProgressText(percentage: string, total: string, speed: string, eta: string) {
