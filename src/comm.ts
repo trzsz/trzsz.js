@@ -285,3 +285,23 @@ export async function resetStdinTty() {
     await new Promise((resolve) => child.on("exit", resolve));
   }
 }
+
+export function setupConsoleOutput() {
+  process.stdout.write("\x1b[?1049h\x1b[H\x1b[2J");
+  const logo = [
+    "ooooooooooooo      ooooooooo.         oooooooooooo       .oooooo..o       oooooooooooo",
+    "8'   888   '8      `888   `Y88.      d'''''''d888'      d8P'    `Y8      d'''''''d888'",
+    "     888            888   .d88'            .888P        Y88bo.                 .888P  ",
+    "     888            888ooo88P'            d888'          `'Y8888o.            d888'   ",
+    "     888            888`88b.            .888P                `'Y88b         .888P     ",
+    "     888            888  `88b.         d888'    .P      oo     .d8P        d888'    .P",
+    "    o888o          o888o  o888o      .888d888d88P       d888d88P'        .888d888d88P ",
+  ];
+  if (process.stdout.columns <= logo[0].length || process.stdout.rows <= logo.length + 2) {
+    return;
+  }
+  const pad = Math.floor((process.stdout.columns - logo[0].length) / 2);
+  for (const s of logo) {
+    process.stdout.write(" ".repeat(pad) + s + "\r\n");
+  }
+}

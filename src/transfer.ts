@@ -27,6 +27,7 @@ export class TrzszTransfer {
   private buffer: TrzszBuffer = new TrzszBuffer();
   private writer: (data: string | Uint8Array) => void;
   private isWindowsShell: boolean;
+  private remoteIsWindows: boolean = false;
   private lastInputTime: number = 0;
   private openedFiles: TrzszFile[] = [];
   private tmuxOutputJunk: boolean = false;
@@ -82,13 +83,11 @@ export class TrzszTransfer {
       throw new TrzszError("Stopped");
     }
 
-    if (this.isWindowsShell) {
+    if (this.isWindowsShell || this.remoteIsWindows) {
       let line = await this.buffer.readLineOnWindows();
-      if (this.tmuxOutputJunk || mayHasJunk) {
-        const idx = line.lastIndexOf("#" + expectType + ":");
-        if (idx >= 0) {
-          line = line.substring(idx);
-        }
+      const idx = line.lastIndexOf("#" + expectType + ":");
+      if (idx >= 0) {
+        line = line.substring(idx);
       }
       return line;
     }
@@ -214,11 +213,12 @@ export class TrzszTransfer {
       version: trzszVersion,
       support_dir: supportDir,
     };
-    if (this.isWindowsShell) {
+    if (this.isWindowsShell || remoteIsWindows) {
       action.binary = false;
       action.newline = "!\n";
     }
     if (remoteIsWindows) {
+      this.remoteIsWindows = true;
       this.protocolNewline = "!\n";
     }
     await this.sendString("ACT", JSON.stringify(action));
@@ -284,9 +284,14 @@ export class TrzszTransfer {
   public async serverExit(msg: string) {
     await this.cleanInput(500);
     await resetStdinTty();
-    process.stdout.write("\x1b8\x1b[0J");
+    if (this.isWindowsShell) {
+      msg = msg.replace(/\n/g, "\r\n");
+      process.stdout.write("\x1b[H\x1b[2J\x1b[?1049l");
+    } else {
+      process.stdout.write("\x1b8\x1b[0J");
+    }
     process.stdout.write(msg);
-    process.stdout.write("\n");
+    process.stdout.write("\r\n");
   }
 
   public async clientError(err: Error) {

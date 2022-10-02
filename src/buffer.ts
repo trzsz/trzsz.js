@@ -159,7 +159,12 @@ export class TrzszBuffer {
 
   public async readLineOnWindows() {
     let buf = new Uint8Array(this.arrBuf);
+    let lastByte = 0x1b;
     let skipVT100 = false;
+    let hasNewline = false;
+    let mayDuplicate = false;
+    let hasCursorHome = false;
+    let preHasCursorHome = false;
     let idx = 0;
     while (true) {
       let next = await this.nextBuffer();
@@ -176,24 +181,43 @@ export class TrzszBuffer {
           // `ctrl + c` to interrupt
           throw new TrzszError("Interrupted");
         }
+        if (c == 0xa) {
+          hasNewline = true;
+        }
         if (skipVT100) {
           if (isVT100End(c)) {
             skipVT100 = false;
-            // skip the duplicate character, e.g., the "8" in "8\r\n\x1b[25;119H8".
-            if (c == 0x48 && idx > 0 && i + 1 < next.length && buf[idx - 1] == next[i + 1]) {
-              i++
+            // moving the cursor may result in duplicate characters
+            if (c == 0x48 && lastByte >= 0x30 && lastByte <= 0x39) {
+              mayDuplicate = true;
             }
           }
+          if (lastByte == 0x5b && c == 0x48) {
+            hasCursorHome = true;
+          }
+          lastByte = c;
         } else if (c == 0x1b) {
           skipVT100 = true;
+          lastByte = c;
         } else if (isTrzszLetter(c)) {
+          if (mayDuplicate) {
+            mayDuplicate = false;
+            // skip the duplicate characters, e.g., the "8" in "8\r\n\x1b[25;119H8".
+            if (hasNewline && idx > 0 && (c == buf[idx - 1] || preHasCursorHome)) {
+              buf[idx - 1] = c;
+              continue;
+            }
+          }
           if (idx >= buf.length) {
             buf = this.growBuffer(buf, idx, next.length);
           }
           buf[idx++] = c;
+          preHasCursorHome = hasCursorHome;
+          hasCursorHome = false;
+          hasNewline = false;
         }
       }
-      if (newLineIdx >= 0) {
+      if (newLineIdx >= 0 && idx > 0 && !skipVT100) {
         return uint8ToStr(buf.subarray(0, idx));
       }
     }

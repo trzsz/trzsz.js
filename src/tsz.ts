@@ -18,6 +18,7 @@ import {
   getTerminalColumns,
   setStdinRaw,
   resetStdinTty,
+  setupConsoleOutput,
   TmuxMode,
   TrzszError,
   TrzszFileReader,
@@ -122,6 +123,7 @@ async function main() {
 
     let uniqueId = (Date.now() % 10e10).toString();
     if (isRunningInWindows) {
+      setupConsoleOutput();
       uniqueId += "10";
     } else if (tmuxMode === TmuxMode.TmuxNormalMode) {
       const columns = getTerminalColumns();
@@ -135,7 +137,7 @@ async function main() {
       uniqueId += "00";
     }
 
-    process.stdout.write(`\x1b7\x07::TRZSZ:TRANSFER:S:${trzszVersion}:${uniqueId}\n`);
+    process.stdout.write(`\x1b7\x07::TRZSZ:TRANSFER:S:${trzszVersion}:${uniqueId}\r\n`);
 
     const transfer = new TrzszTransfer(realStdoutWriter as any, isRunningInWindows);
 
