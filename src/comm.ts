@@ -71,7 +71,7 @@ export class TrzszError extends Error {
   constructor(message: string, type: string | null = null, trace: boolean = false) {
     if (type === "fail" || type === "FAIL" || type === "EXIT") {
       try {
-        message = String.fromCharCode.apply(null, decodeBuffer(message));
+        message = new TextDecoder().decode(decodeBuffer(message));
       } catch (err) {
         message = `decode [${message}] error: ${err}`;
       }

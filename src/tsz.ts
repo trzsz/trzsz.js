@@ -50,9 +50,9 @@ function parseArgs() {
   });
   parser.add_argument("-t", "--timeout", {
     type: "int",
-    default: 10,
+    default: 20,
     metavar: "N",
-    help: "timeout ( N seconds ) for each buffer chunk.\nN <= 0 means never timeout. (default: 10)",
+    help: "timeout ( N seconds ) for each buffer chunk.\nN <= 0 means never timeout. (default: 20)",
   });
   parser.add_argument("file", { nargs: "+", help: "file(s) to be sent" });
   return parser.parse_args();

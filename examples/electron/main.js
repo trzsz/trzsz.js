@@ -16,6 +16,7 @@ const createWindow = () => {
     width: width,
     height: height,
     webPreferences: {
+      sandbox: false,
       contextIsolation: false,
       preload: require("path").join(__dirname, "preload.js"),
     },

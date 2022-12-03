@@ -18,6 +18,7 @@ import {
   TrzszFile,
   OpenSaveFile,
   TrzszFileReader,
+  TrzszFileWriter,
   ProgressCallback,
 } from "./comm";
 
@@ -371,6 +372,43 @@ export class TrzszTransfer {
     }
   }
 
+  private async sendFileData(
+    file: TrzszFileReader,
+    size: number,
+    binary: boolean,
+    escapeCodes: Array<number[]>,
+    maxBufSize: number,
+    progressCallback: ProgressCallback
+  ) {
+    let step = 0;
+    let bufSize = 1024;
+    let buffer = new ArrayBuffer(bufSize);
+    const md5 = new Md5();
+    while (step < size) {
+      const beginTime = Date.now();
+      const data = await file.readFile(buffer);
+      await this.sendData(data, binary, escapeCodes);
+      md5.appendByteArray(data);
+      await this.checkInteger(data.length);
+      step += data.length;
+      if (progressCallback) {
+        progressCallback.onStep(step);
+      }
+      const chunkTime = Date.now() - beginTime;
+      if (data.length == bufSize && chunkTime < 500 && bufSize < maxBufSize) {
+        bufSize = Math.min(bufSize * 2, maxBufSize);
+        buffer = new ArrayBuffer(bufSize);
+      } else if (chunkTime >= 2000 && bufSize > 1024) {
+        bufSize = 1024;
+        buffer = new ArrayBuffer(bufSize);
+      }
+      if (chunkTime > this.maxChunkTimeInMilliseconds) {
+        this.maxChunkTimeInMilliseconds = chunkTime;
+      }
+    }
+    return new Uint8Array((md5.end(true) as Int32Array).buffer);
+  }
+
   private async sendFileMD5(digest: Uint8Array, progressCallback: ProgressCallback) {
     await this.sendBinary("MD5", digest);
     await this.checkBinary(digest);
@@ -389,8 +427,6 @@ export class TrzszTransfer {
 
     await this.sendFileNum(files.length, progressCallback);
 
-    let bufSize = 1024;
-    let buffer = new ArrayBuffer(bufSize);
     const remoteNames = [];
     for (const file of files) {
       const remoteName = await this.sendFileName(file, directory, progressCallback);
@@ -403,33 +439,12 @@ export class TrzszTransfer {
         continue;
       }
 
-      const fileSize = file.getSize();
-      await this.sendFileSize(fileSize, progressCallback);
+      const size = file.getSize();
+      await this.sendFileSize(size, progressCallback);
 
-      let step = 0;
-      const md5 = new Md5();
-      while (step < fileSize) {
-        const beginTime = Date.now();
-        const data = await file.readFile(buffer);
-        await this.sendData(data, binary, escapeCodes);
-        md5.appendByteArray(data);
-        await this.checkInteger(data.length);
-        step += data.length;
-        if (progressCallback) {
-          progressCallback.onStep(step);
-        }
-        const chunkTime = Date.now() - beginTime;
-        if (data.length == bufSize && chunkTime < 500 && bufSize < maxBufSize) {
-          bufSize = Math.min(bufSize * 2, maxBufSize);
-          buffer = new ArrayBuffer(bufSize);
-        }
-        if (chunkTime > this.maxChunkTimeInMilliseconds) {
-          this.maxChunkTimeInMilliseconds = chunkTime;
-        }
-      }
+      const digest = await this.sendFileData(file, size, binary, escapeCodes, maxBufSize, progressCallback);
       file.closeFile();
 
-      const digest = new Uint8Array((md5.end(true) as Int32Array).buffer);
       await this.sendFileMD5(digest, progressCallback);
     }
 
@@ -468,6 +483,34 @@ export class TrzszTransfer {
       progressCallback.onSize(fileSize);
     }
     return fileSize;
+  }
+
+  private async recvFileData(
+    file: TrzszFileWriter,
+    size: number,
+    binary: boolean,
+    escapeCodes: Array<number[]>,
+    timeoutInMilliseconds: number,
+    progressCallback: ProgressCallback
+  ) {
+    let step = 0;
+    const md5 = new Md5();
+    while (step < size) {
+      const beginTime = Date.now();
+      const data = await this.recvData(binary, escapeCodes, timeoutInMilliseconds);
+      await file.writeFile(data);
+      step += data.length;
+      if (progressCallback) {
+        progressCallback.onStep(step);
+      }
+      await this.sendInteger("SUCC", data.length);
+      md5.appendByteArray(data);
+      const chunkTime = Date.now() - beginTime;
+      if (chunkTime > this.maxChunkTimeInMilliseconds) {
+        this.maxChunkTimeInMilliseconds = chunkTime;
+      }
+    }
+    return new Uint8Array((md5.end(true) as Int32Array).buffer);
   }
 
   private async recvFileMD5(digest: Uint8Array, progressCallback: ProgressCallback) {
@@ -509,28 +552,11 @@ export class TrzszTransfer {
 
       this.openedFiles.push(file);
 
-      const fileSize = await this.recvFileSize(progressCallback);
+      const size = await this.recvFileSize(progressCallback);
 
-      let step = 0;
-      const md5 = new Md5();
-      while (step < fileSize) {
-        const beginTime = Date.now();
-        const data = await this.recvData(binary, escapeCodes, timeoutInMilliseconds);
-        await file.writeFile(data);
-        step += data.length;
-        if (progressCallback) {
-          progressCallback.onStep(step);
-        }
-        await this.sendInteger("SUCC", data.length);
-        md5.appendByteArray(data);
-        const chunkTime = Date.now() - beginTime;
-        if (chunkTime > this.maxChunkTimeInMilliseconds) {
-          this.maxChunkTimeInMilliseconds = chunkTime;
-        }
-      }
+      const digest = await this.recvFileData(file, size, binary, escapeCodes, timeoutInMilliseconds, progressCallback);
       file.closeFile();
 
-      const digest = new Uint8Array((md5.end(true) as Int32Array).buffer);
       await this.recvFileMD5(digest, progressCallback);
     }
 

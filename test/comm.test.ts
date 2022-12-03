@@ -4,6 +4,9 @@
  * @license MIT
  */
 
+import { TextDecoder } from "util";
+global.TextDecoder = TextDecoder;
+
 import {
   strToUint8,
   strToArrBuf,
@@ -48,11 +51,11 @@ test("string and Uint8Array transform", async () => {
 });
 
 test("trzsz error remote exit", () => {
-  const te = new TrzszError("eJwLLskvKEhNAQALbQLg", "EXIT");
+  const te = new TrzszError("eJwLLskvKEhNedo459naRQArrgcX", "EXIT");
   expect(te.isTraceBack()).toBe(false);
   expect(te.isRemoteExit()).toBe(true);
   expect(te.isRemoteFail()).toBe(false);
-  expect(TrzszError.getErrorMessage(te)).toBe("Stopped");
+  expect(TrzszError.getErrorMessage(te)).toBe("Stopped停止");
 });
 
 test("trzsz error remote fail and trace back", () => {
