@@ -1,6 +1,6 @@
 /**
  * trzsz: https://github.com/trzsz/trzsz.js
- * Copyright(c) 2022 Lonny Wong <lonnywong@qq.com>
+ * Copyright(c) 2023 Lonny Wong <lonnywong@qq.com>
  * @license MIT
  */
 
@@ -516,11 +516,11 @@ test("send action confirm or cancel", async () => {
   const writer = jest.fn();
   const trzsz = new TrzszTransfer(writer);
 
-  await trzsz.sendAction(true, false, false);
+  await trzsz.sendAction(true, false);
   expect(writer.mock.calls.length).toBe(1);
   expect(writer.mock.calls[0][0]).toContain("#ACT:");
 
-  await trzsz.sendAction(false, false, false);
+  await trzsz.sendAction(false, false);
   expect(writer.mock.calls.length).toBe(2);
   expect(writer.mock.calls[1][0]).toContain("#ACT:");
 });

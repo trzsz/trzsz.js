@@ -1,6 +1,6 @@
 /**
  * trzsz: https://github.com/trzsz/trzsz.js
- * Copyright(c) 2022 Lonny Wong <lonnywong@qq.com>
+ * Copyright(c) 2023 Lonny Wong <lonnywong@qq.com>
  * @license MIT
  */
 
@@ -8,7 +8,7 @@ import { BrowserFileReader } from "./browser";
 
 /* eslint-disable require-jsdoc */
 
-async function parseDataTransferItem(
+async function parseFileSystemEntry(
   pathId: number,
   item: FileSystemEntry,
   fileList: BrowserFileReader[],
@@ -27,7 +27,7 @@ async function parseDataTransferItem(
       const dirReader = (item as FileSystemDirectoryEntry).createReader();
       dirReader.readEntries(async (entries) => {
         for (const entry of entries) {
-          await parseDataTransferItem(pathId, entry, fileList, [...relPath, entry.name]);
+          await parseFileSystemEntry(pathId, entry, fileList, [...relPath, entry.name]);
         }
         resolve();
       });
@@ -44,7 +44,7 @@ export async function parseDataTransferItemList(items: DataTransferItemList) {
   for (let i = 0; i < entries.length; i++) {
     const item = entries[i];
     if (item) {
-      await parseDataTransferItem(i, item, fileList, [item.name]);
+      await parseFileSystemEntry(i, item, fileList, [item.name]);
     }
   }
   return fileList;

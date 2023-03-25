@@ -1,6 +1,6 @@
 /**
  * trzsz: https://github.com/trzsz/trzsz.js
- * Copyright(c) 2022 Lonny Wong <lonnywong@qq.com>
+ * Copyright(c) 2023 Lonny Wong <lonnywong@qq.com>
  * @license MIT
  */
 
@@ -87,7 +87,6 @@ test("default trzsz options for filter", () => {
   expect((tf as any).sendToServer).toBe(func);
   expect((tf as any).chooseSendFiles).toBe(undefined);
   expect((tf as any).chooseSaveDirectory).toBe(undefined);
-  expect((tf as any).requireUserPermission).toBe(undefined);
   expect((tf as any).terminalColumns).toBe(80);
 });
 
@@ -98,14 +97,12 @@ test("custom trzsz options for filter", () => {
     sendToServer: func,
     chooseSendFiles: func,
     chooseSaveDirectory: func,
-    requireUserPermission: func,
     terminalColumns: 100,
   });
   expect((tf as any).writeToTerminal).toBe(func);
   expect((tf as any).sendToServer).toBe(func);
   expect((tf as any).chooseSendFiles).toBe(func);
   expect((tf as any).chooseSaveDirectory).toBe(func);
-  expect((tf as any).requireUserPermission).toBe(func);
   expect((tf as any).terminalColumns).toBe(100);
 });
 
@@ -389,6 +386,7 @@ test("trz upload files in browser", async () => {
 test("tsz download files in browser", async () => {
   // @ts-ignore
   comm.isRunningInBrowser = true;
+  const selectSaveDirectory = jest.spyOn(browser, "selectSaveDirectory");
   const openSaveFile = jest.spyOn(browser, "openSaveFile");
 
   const writeToTerminal = jest.fn();
@@ -397,6 +395,10 @@ test("tsz download files in browser", async () => {
     writeToTerminal: writeToTerminal,
     sendToServer: sendToServer,
   });
+  const handle = {
+    kind: "directory",
+    name: "tmp",
+  };
   const file = {
     closeFile: jest.fn(),
     getLocalName: jest.fn(),
@@ -406,6 +408,7 @@ test("tsz download files in browser", async () => {
   };
 
   file.getLocalName.mockReturnValueOnce("test.txt.0");
+  selectSaveDirectory.mockReturnValueOnce(handle as any);
   openSaveFile.mockResolvedValueOnce(file as any);
 
   trzsz.processServerOutput("::TRZSZ:TRANSFER" + ":S:1.0.0:0");
@@ -427,6 +430,7 @@ test("tsz download files in browser", async () => {
   trzsz.processServerOutput("#MD5:eJy79tqIQ6ZJ72rRdtb0pty5cwE+YAdb\n");
 
   await sleep(500);
+  expect(selectSaveDirectory.mock.calls.length).toBe(1);
   expect(openSaveFile.mock.calls.length).toBe(1);
   expect(openSaveFile.mock.calls[0][1]).toBe("test.txt");
 
@@ -452,75 +456,4 @@ test("tsz download files in browser", async () => {
   expect(file.writeFile.mock.calls[0][0]).toStrictEqual(strToUint8("test content\n"));
 
   openSaveFile.mockRestore();
-});
-
-test("require user permission in browser", async () => {
-  // @ts-ignore
-  comm.isRunningInBrowser = true;
-
-  const writeToTerminal = jest.fn();
-  const sendToServer = jest.fn();
-  const requireUserPermission = jest.fn();
-  const trzsz = new TrzszFilter({
-    writeToTerminal: writeToTerminal,
-    sendToServer: sendToServer,
-    requireUserPermission: requireUserPermission,
-  });
-
-  const file = new File([""], "test.txt.0", { type: "text/plain" });
-  const mockFileStream = {
-    write: jest.fn(),
-    close: jest.fn(),
-  };
-  const securityError = new Error("user gesture");
-  securityError.name = "SecurityError";
-  window.showSaveFilePicker = jest.fn();
-  window.showSaveFilePicker.mockRejectedValueOnce(securityError).mockReturnValueOnce({
-    getFile: async () => file,
-    createWritable: async () => mockFileStream,
-  });
-
-  requireUserPermission.mockResolvedValueOnce(true);
-
-  trzsz.processServerOutput("::TRZSZ:TRANSFER" + ":S:1.0.0:0");
-  expect(writeToTerminal.mock.calls.length).toBe(1);
-  expect(writeToTerminal.mock.calls[0][0]).toBe("::TRZSZ:TRANSFER" + ":S:1.0.0:0");
-
-  await sleep(100);
-  trzsz.processServerOutput(
-    "#CFG:eJyrVspJzEtXslJQKqhU0lFQSipNK86sSgUKGBqYWJiamwHFSjJzU/NLS8BiBiB+bmlFPFCgoLQkPqs0LxsoUVJUmloLAF6AF9g=\n"
-  );
-  trzsz.processServerOutput("#NUM:1\n");
-  trzsz.processServerOutput("#NAME:eJwrSS0u0SupKAEADtkDTw==\n");
-  await sleep(100);
-  trzsz.processTerminalInput("user input");
-  trzsz.processBinaryInput("binary input");
-  trzsz.setTerminalColumns(100);
-  trzsz.processServerOutput("#SIZE:13\n");
-  trzsz.processServerOutput("#DATA:eJwrSS0uUUjOzytJzSvhAgAkDwTm\n");
-  trzsz.processServerOutput("#MD5:eJy79tqIQ6ZJ72rRdtb0pty5cwE+YAdb\n");
-
-  await sleep(500);
-  expect(requireUserPermission.mock.calls.length).toBe(1);
-  expect(window.showSaveFilePicker.mock.calls.length).toBe(2);
-
-  expect(sendToServer.mock.calls.length).toBe(7);
-  expect(sendToServer.mock.calls[0][0]).toContain("#ACT:");
-  expect(sendToServer.mock.calls[1][0]).toBe("#SUCC:1\n");
-  expect(sendToServer.mock.calls[2][0]).toBe("#SUCC:eJwrSS0u0SupKNEzAAAWAwOt\n");
-  expect(sendToServer.mock.calls[3][0]).toBe("#SUCC:13\n");
-  expect(sendToServer.mock.calls[4][0]).toBe("#SUCC:13\n");
-  expect(sendToServer.mock.calls[5][0]).toBe("#SUCC:eJy79tqIQ6ZJ72rRdtb0pty5cwE+YAdb\n");
-  expect(sendToServer.mock.calls[6][0]).toContain("#EXIT:");
-
-  trzsz.processServerOutput("Saved test.txt.0 to /tmp\n");
-
-  expect(writeToTerminal.mock.calls.length).toBe(4);
-  expect(writeToTerminal.mock.calls[1][0]).toContain("test.txt [");
-  expect(writeToTerminal.mock.calls[2][0]).toBe("\r");
-  expect(writeToTerminal.mock.calls[3][0]).toBe("Saved test.txt.0 to /tmp\n");
-
-  expect(mockFileStream.write.mock.calls.length).toBe(1);
-  expect(mockFileStream.write.mock.calls[0][0]).toStrictEqual(strToUint8("test content\n"));
-  expect(mockFileStream.close.mock.calls.length).toBe(1);
 });

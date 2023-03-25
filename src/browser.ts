@@ -1,6 +1,6 @@
 /**
  * trzsz: https://github.com/trzsz/trzsz.js
- * Copyright(c) 2022 Lonny Wong <lonnywong@qq.com>
+ * Copyright(c) 2023 Lonny Wong <lonnywong@qq.com>
  * @license MIT
  */
 
@@ -49,7 +49,10 @@ export class BrowserFileReader implements TrzszFileReader {
       this.pos += len;
       return new Uint8Array(await chunk.arrayBuffer());
     } catch (err) {
-      throw new TrzszError(err.toString());
+      if (err.name === "NotReadableError") {
+        throw new TrzszError(`No permission to read: ${this.relPath.join("/")}`);
+      }
+      throw new TrzszError(`Read ${this.relPath.join("/")} error: ${err.toString()}`);
     }
   }
 
@@ -61,15 +64,39 @@ export class BrowserFileReader implements TrzszFileReader {
   }
 }
 
+export async function parseFileSystemHandle(
+  pathId: number,
+  handle: FileSystemHandle,
+  fileList: BrowserFileReader[],
+  relPath: string[]
+) {
+  if (handle.kind === "file") {
+    const file = await (handle as FileSystemFileHandle).getFile();
+    fileList.push(new BrowserFileReader(pathId, relPath, file, false));
+  } else if (handle.kind === "directory") {
+    fileList.push(new BrowserFileReader(pathId, relPath, null, true));
+    const dirHandle = handle as any; // FileSystemDirectoryHandle
+    for await (const entry of dirHandle.values()) {
+      const name = entry.name;
+      if (entry.kind === "file") {
+        await parseFileSystemHandle(pathId, await dirHandle.getFileHandle(name), fileList, [...relPath, name]);
+      } else if (entry.kind === "directory") {
+        await parseFileSystemHandle(pathId, await dirHandle.getDirectoryHandle(name), fileList, [...relPath, name]);
+      }
+    }
+  }
+}
+
 export async function selectSendFiles(): Promise<TrzszFileReader[] | undefined> {
-  if (!window.hasOwnProperty("showOpenFilePicker")) {
+  // @ts-ignore
+  if (typeof window.showOpenFilePicker !== "function") {
     throw new TrzszError("The browser doesn't support the File System Access API");
   }
 
   let fileHandleArray;
   try {
     // @ts-ignore
-    fileHandleArray = await window.showOpenFilePicker({ multiple: true });
+    fileHandleArray = await window.showOpenFilePicker({ id: "trzsz_upload", startIn: "documents", multiple: true });
   } catch (err) {
     if (err.name === "AbortError") {
       return undefined;
@@ -89,16 +116,40 @@ export async function selectSendFiles(): Promise<TrzszFileReader[] | undefined> 
   return bfrArray;
 }
 
+export async function selectSendDirectories(): Promise<TrzszFileReader[] | undefined> {
+  // @ts-ignore
+  if (typeof window.showDirectoryPicker !== "function") {
+    throw new TrzszError("The browser doesn't support the File System Access API");
+  }
+
+  let dirHandle;
+  try {
+    // @ts-ignore
+    dirHandle = await window.showDirectoryPicker({ id: "trzsz_upload", startIn: "documents" });
+  } catch (err) {
+    if (err.name === "AbortError") {
+      return undefined;
+    }
+    throw err;
+  }
+
+  const fileList: BrowserFileReader[] = [];
+  await parseFileSystemHandle(0, dirHandle, fileList, [dirHandle.name]);
+  return fileList;
+}
+
 class BrowserFileWriter implements TrzszFileWriter {
   private writer; // FileSystemWritableFileStream
   private closed: boolean = false;
   private fileName: string;
   private localName: string;
+  private dir: boolean;
 
-  constructor(fileName, localName: string, writer) {
+  constructor(fileName, localName: string, writer: any, dir: boolean = false) {
     this.fileName = fileName;
     this.localName = localName;
     this.writer = writer;
+    this.dir = dir;
   }
 
   public getFileName(): string {
@@ -110,7 +161,7 @@ class BrowserFileWriter implements TrzszFileWriter {
   }
 
   public isDir(): boolean {
-    return false;
+    return this.dir;
   }
 
   public async writeFile(buf: Uint8Array) {
@@ -126,84 +177,119 @@ class BrowserFileWriter implements TrzszFileWriter {
   }
 }
 
-async function doShowSaveFilePicker(fileName: string) {
+export async function selectSaveDirectory(): Promise<FileSystemDirectoryHandle | undefined> {
+  // @ts-ignore
+  if (typeof window.showDirectoryPicker !== "function") {
+    throw new TrzszError("The browser doesn't support the File System Access API");
+  }
+
   try {
     // @ts-ignore
-    return await window.showSaveFilePicker({ suggestedName: fileName });
+    return await window.showDirectoryPicker({ id: "trzsz_download", startIn: "downloads", mode: "readwrite" });
   } catch (err) {
     if (err.name === "AbortError") {
-      throw new TrzszError(err.toString());
+      return undefined;
     }
     throw err;
   }
 }
 
-function isNeedUserPermission(err: Error) {
-  return err.name === "SecurityError";
+async function getNewName(dirHandle: FileSystemDirectoryHandle, fileName: string) {
+  const nameSet = new Set();
+  // @ts-ignore
+  for await (const entry of dirHandle.values()) {
+    nameSet.add(entry.name);
+  }
+  if (!nameSet.has(fileName)) {
+    return fileName;
+  }
+  for (let i = 0; i < 1000; i++) {
+    const saveName = `${fileName}.${i}`;
+    if (!nameSet.has(saveName)) {
+      return saveName;
+    }
+  }
 }
 
-export async function openSaveFile(
-  requireUserPermission: Function,
-  fileName: string,
-  directory: boolean,
-  overwrite: boolean // eslint-disable-line @typescript-eslint/no-unused-vars
-) {
-  if (directory) {
-    throw new TrzszError("The browser doesn't support transfer directory");
-  }
-  if (!window.hasOwnProperty("showSaveFilePicker")) {
-    throw new TrzszError("The browser doesn't support the File System Access API");
-  }
-
-  let fileHandle;
+async function doCreateFile(handle: FileSystemDirectoryHandle, fullPath: string[]) {
   try {
-    fileHandle = await doShowSaveFilePicker(fileName);
+    const fileHandle = await handle.getFileHandle(fullPath[fullPath.length - 1], { create: true });
+    // @ts-ignore
+    return await fileHandle.createWritable();
   } catch (err) {
-    if (!isNeedUserPermission(err)) {
-      throw err;
+    if (err.name === "NoModificationAllowedError") {
+      throw new TrzszError(`No permission to write: ${fullPath.join("/")}`);
+    } else if (err.name === "TypeMismatchError") {
+      throw new TrzszError(`Is a directory: ${fullPath.join("/")}`);
     }
+    throw new TrzszError(`Write ${fullPath.join("/")} error: ${err.toString()}`);
+  }
+}
 
-    const authorized = await requireUserPermission(fileName);
-    if (!authorized) {
-      throw new TrzszError("Cancelled");
+async function doCreateDirectory(handle: FileSystemDirectoryHandle, fullPath: string[]) {
+  try {
+    return await handle.getDirectoryHandle(fullPath[fullPath.length - 1], { create: true });
+  } catch (err) {
+    if (err.name === "InvalidStateError") {
+      throw new TrzszError(`No permission to create: ${fullPath.join("/")}`);
+    } else if (err.name === "TypeMismatchError") {
+      throw new TrzszError(`Not a directory: ${fullPath.join("/")}`);
     }
+    throw new TrzszError(`Create ${fullPath.join("/")} error: ${err.toString()}`);
+  }
+}
 
-    try {
-      fileHandle = await doShowSaveFilePicker(fileName);
-    } catch (e) {
-      if (isNeedUserPermission(e)) {
-        throw new TrzszError("No permission to call the File System Access API");
-      }
-      throw e;
+async function createFile(handle: FileSystemDirectoryHandle, fileName: string, overwrite: boolean) {
+  const localName = overwrite ? fileName : await getNewName(handle, fileName);
+  const writer = await doCreateFile(handle, [handle.name, localName]);
+  return new BrowserFileWriter(fileName, localName, writer);
+}
+
+export async function openSaveFile(saveParam: any, fileName: string, directory: boolean, overwrite: boolean) {
+  const rootHandle = saveParam.handle as FileSystemDirectoryHandle;
+  if (!directory) {
+    return await createFile(rootHandle, fileName, overwrite);
+  }
+
+  const file = JSON.parse(fileName);
+  if (
+    !file.hasOwnProperty("path_name") ||
+    !file.hasOwnProperty("path_id") ||
+    !file.hasOwnProperty("is_dir") ||
+    file.path_name.length < 1
+  ) {
+    throw new TrzszError(`Invalid name: ${fileName}`);
+  }
+
+  fileName = file.path_name[file.path_name.length - 1];
+  let localName: string;
+  if (overwrite) {
+    localName = file.path_name[0];
+  } else {
+    if (saveParam.maps.has(file.path_id)) {
+      localName = saveParam.maps.get(file.path_id);
+    } else {
+      localName = await getNewName(rootHandle, file.path_name[0]);
+      saveParam.maps.set(file.path_id, localName);
     }
   }
 
-  const file = await fileHandle.getFile();
-  const writer = await fileHandle.createWritable();
-  return new BrowserFileWriter(fileName, file.name, writer);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function defaultRequireUserPermission(fileName: string): Promise<boolean> {
-  return new Promise<boolean>((resolve) => {
-    const div = document.createElement("div");
-    div.style.cssText = "position: fixed; left: 0; top: 0; width: 100%; height: 50px; line-height: 50px;";
-    div.style.cssText += "text-align: center; background: #28a745; color: #fff;";
-    div.innerHTML += "Click anywhere or press the space key to download ";
-    const code = document.createElement("code");
-    code.style.cssText = "padding: 5px 10px; border-radius: 5px; background: #f9f2f4; color: #c7254e;";
-    code.innerHTML += fileName;
-    div.appendChild(code);
-    document.body.appendChild(div);
-
-    function grantedPermission() {
-      div.remove();
-      document.removeEventListener("click", grantedPermission);
-      document.removeEventListener("keypress", grantedPermission);
-      resolve(true);
+  let dirHandle = rootHandle;
+  const fullPath: string[] = [rootHandle.name, localName];
+  if (file.path_name.length > 1) {
+    dirHandle = await doCreateDirectory(dirHandle, fullPath);
+    for (let i = 1; i < file.path_name.length - 1; i++) {
+      fullPath.push(file.path_name[i]);
+      dirHandle = await doCreateDirectory(dirHandle, fullPath);
     }
+    fullPath.push(fileName);
+  }
 
-    document.addEventListener("click", grantedPermission, { once: true });
-    document.addEventListener("keypress", grantedPermission, { once: true });
-  });
+  if (file.is_dir === true) {
+    await doCreateDirectory(dirHandle, fullPath);
+    return new BrowserFileWriter(fileName, localName, null, true);
+  }
+
+  const writer = await doCreateFile(dirHandle, fullPath);
+  return new BrowserFileWriter(fileName, localName, writer);
 }

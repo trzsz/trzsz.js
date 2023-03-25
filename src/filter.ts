@@ -1,6 +1,6 @@
 /**
  * trzsz: https://github.com/trzsz/trzsz.js
- * Copyright(c) 2022 Lonny Wong <lonnywong@qq.com>
+ * Copyright(c) 2023 Lonny Wong <lonnywong@qq.com>
  * @license MIT
  */
 
@@ -77,7 +77,6 @@ export class TrzszFilter {
   private sendToServer: (input: string | Uint8Array) => void;
   private chooseSendFiles?: (directory?: boolean) => Promise<string[] | undefined>;
   private chooseSaveDirectory?: () => Promise<string | undefined>;
-  private requireUserPermission?: (fileName: string) => Promise<boolean>;
   private terminalColumns: number;
   private isWindowsShell: boolean;
   private trzszTransfer: TrzszTransfer | null = null;
@@ -110,7 +109,6 @@ export class TrzszFilter {
 
     this.chooseSendFiles = options.chooseSendFiles;
     this.chooseSaveDirectory = options.chooseSaveDirectory;
-    this.requireUserPermission = options.requireUserPermission;
     this.terminalColumns = options.terminalColumns || 80;
     this.isWindowsShell = !!options.isWindowsShell;
   }
@@ -325,26 +323,31 @@ export class TrzszFilter {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private async handleTrzszDownloadFiles(version: string, remoteIsWindows: boolean) {
     let savePath;
     let saveParam;
     let openSaveFile;
     if (isRunningInBrowser) {
+      const saveDirHandle = await browser.selectSaveDirectory();
+      if (!saveDirHandle) {
+        await this.trzszTransfer.sendAction(false, remoteIsWindows);
+        return;
+      }
+      savePath = saveDirHandle.name;
+      saveParam = { handle: saveDirHandle, maps: new Map<string, string>() };
       openSaveFile = browser.openSaveFile;
-      saveParam = this.requireUserPermission ? this.requireUserPermission : browser.defaultRequireUserPermission;
     } else {
       savePath = await this.chooseSaveDirectory();
       if (!savePath) {
-        await this.trzszTransfer.sendAction(false, remoteIsWindows, !isRunningInBrowser);
+        await this.trzszTransfer.sendAction(false, remoteIsWindows);
         return;
       }
       nodefs.checkPathWritable(savePath);
-      openSaveFile = nodefs.openSaveFile;
       saveParam = { path: savePath, maps: new Map<string, string>() };
+      openSaveFile = nodefs.openSaveFile;
     }
 
-    await this.trzszTransfer.sendAction(true, remoteIsWindows, !isRunningInBrowser);
+    await this.trzszTransfer.sendAction(true, remoteIsWindows);
     const config = await this.trzszTransfer.recvConfig();
 
     if (config.quiet !== true) {
@@ -353,37 +356,27 @@ export class TrzszFilter {
 
     const localNames = await this.trzszTransfer.recvFiles(saveParam, openSaveFile, this.textProgressBar);
 
-    await this.trzszTransfer.clientExit(`Saved ${localNames.join(", ")}${savePath ? " to " + savePath : ""}`);
+    await this.trzszTransfer.clientExit(`Saved ${localNames.join(", ")} to ${savePath}`);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private async handleTrzszUploadFiles(version: string, directory: boolean, remoteIsWindows: boolean) {
     let sendFiles;
-    let supportDir = true;
     if (this.uploadFilesList) {
       sendFiles = this.uploadFilesList;
       this.uploadFilesList = null;
     } else if (isRunningInBrowser) {
-      supportDir = false;
-      if (directory) {
-        // The action will send that transferring directories is not supported.
-        await this.trzszTransfer.sendAction(true, remoteIsWindows, supportDir);
-        // The receiving configuration should fail.
-        await this.trzszTransfer.recvConfig();
-        return;
-      }
-      sendFiles = await browser.selectSendFiles();
+      sendFiles = directory ? await browser.selectSendDirectories() : await browser.selectSendFiles();
     } else {
       const filePaths = await this.chooseSendFiles(directory);
       sendFiles = nodefs.checkPathsReadable(filePaths, directory);
     }
 
     if (!sendFiles || !sendFiles.length) {
-      await this.trzszTransfer.sendAction(false, remoteIsWindows, supportDir);
+      await this.trzszTransfer.sendAction(false, remoteIsWindows);
       return;
     }
 
-    await this.trzszTransfer.sendAction(true, remoteIsWindows, supportDir);
+    await this.trzszTransfer.sendAction(true, remoteIsWindows);
     const config = await this.trzszTransfer.recvConfig();
 
     if (config.overwrite === true) {

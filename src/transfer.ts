@@ -1,6 +1,6 @@
 /**
  * trzsz: https://github.com/trzsz/trzsz.js
- * Copyright(c) 2022 Lonny Wong <lonnywong@qq.com>
+ * Copyright(c) 2023 Lonny Wong <lonnywong@qq.com>
  * @license MIT
  */
 
@@ -207,12 +207,12 @@ export class TrzszTransfer {
     ]);
   }
 
-  public async sendAction(confirm: boolean, remoteIsWindows: boolean, supportDir: boolean) {
+  public async sendAction(confirm: boolean, remoteIsWindows: boolean) {
     const action: any = {
       lang: "js",
       confirm: confirm,
       version: trzszVersion,
-      support_dir: supportDir,
+      support_dir: true,
     };
     if (this.isWindowsShell || remoteIsWindows) {
       action.binary = false;

@@ -106,3 +106,4 @@ dist
 # Other ignore files
 lib/
 *.swp
+*.swo

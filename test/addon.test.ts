@@ -138,7 +138,12 @@ test("trz upload files using addon", async () => {
 test("tsz download files using addon", async () => {
   // @ts-ignore
   comm.isRunningInBrowser = true;
+  const selectSaveDirectory = jest.spyOn(browser, "selectSaveDirectory");
   const openSaveFile = jest.spyOn(browser, "openSaveFile");
+  const handle = {
+    kind: "directory",
+    name: "tmp",
+  };
   const file = {
     closeFile: jest.fn(),
     getLocalName: jest.fn(),
@@ -147,6 +152,7 @@ test("tsz download files using addon", async () => {
     isDir: () => false,
   };
   file.getLocalName.mockReturnValueOnce("test.txt.0");
+  selectSaveDirectory.mockReturnValueOnce(handle as any);
   openSaveFile.mockResolvedValueOnce(file as any);
 
   const ws = new MockWebSocket();
@@ -178,6 +184,7 @@ test("tsz download files using addon", async () => {
   onMessage({ data: "#MD5:eJy79tqIQ6ZJ72rRdtb0pty5cwE+YAdb\n" });
 
   await sleep(500);
+  expect(selectSaveDirectory.mock.calls.length).toBe(1);
   expect(openSaveFile.mock.calls.length).toBe(1);
   expect(openSaveFile.mock.calls[0][1]).toBe("test.txt");
 

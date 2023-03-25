@@ -1,6 +1,6 @@
 /**
  * trzsz: https://github.com/trzsz/trzsz.js
- * Copyright(c) 2022 Lonny Wong <lonnywong@qq.com>
+ * Copyright(c) 2023 Lonny Wong <lonnywong@qq.com>
  * @license MIT
  */
 
@@ -48,7 +48,6 @@ export class TrzszAddon implements ITerminalAddon {
       sendToServer: sendToServer,
       chooseSendFiles: this.options.chooseSendFiles,
       chooseSaveDirectory: this.options.chooseSaveDirectory,
-      requireUserPermission: this.options.requireUserPermission,
       terminalColumns: terminal.cols,
       isWindowsShell: this.options.isWindowsShell,
     });

@@ -1,6 +1,6 @@
 /**
  * trzsz: https://github.com/trzsz/trzsz.js
- * Copyright(c) 2022 Lonny Wong <lonnywong@qq.com>
+ * Copyright(c) 2023 Lonny Wong <lonnywong@qq.com>
  * @license MIT
  */
 
@@ -38,7 +38,7 @@ export interface TrzszOptions {
   chooseSaveDirectory?: () => Promise<string | undefined>;
 
   /**
-   * A user event may be required to open the save dialog in browsers.
+   * @deprecated A user event may be required to open the save dialog in browsers.
    * No need for nodejs environment ( e.g.: electron preload.js )
    * @param {string} fileName - The file name going to download.
    * @return {Promise<boolean>} open the save dialog or cancel the download.
