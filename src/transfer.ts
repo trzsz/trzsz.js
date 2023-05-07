@@ -381,6 +381,9 @@ export class TrzszTransfer {
     progressCallback: ProgressCallback
   ) {
     let step = 0;
+    if (progressCallback) {
+      progressCallback.onStep(step);
+    }
     let bufSize = 1024;
     let buffer = new ArrayBuffer(bufSize);
     const md5 = new Md5();
@@ -494,6 +497,9 @@ export class TrzszTransfer {
     progressCallback: ProgressCallback
   ) {
     let step = 0;
+    if (progressCallback) {
+      progressCallback.onStep(step);
+    }
     const md5 = new Md5();
     while (step < size) {
       const beginTime = Date.now();

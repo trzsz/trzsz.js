@@ -69,8 +69,9 @@ test("upload files using base64 mode", async () => {
     trzsz.addReceivedData("#SUCC:13\n");
     await sleep(100);
 
-    expect(progress.onStep.mock.calls.length).toBe(1);
-    expect(progress.onStep.mock.calls[0][0]).toBe(13);
+    expect(progress.onStep.mock.calls.length).toBe(2);
+    expect(progress.onStep.mock.calls[0][0]).toBe(0);
+    expect(progress.onStep.mock.calls[1][0]).toBe(13);
     expect(writer.mock.calls.length).toBe(5);
     expect(writer.mock.calls[4][0]).toBe("#MD5:eJy79tqIQ6ZJ72rRdtb0pty5cwE+YAdb\n");
 
@@ -155,8 +156,9 @@ test("upload files using binary mode", async () => {
     trzsz.addReceivedData("#SUCC:11\n");
     await sleep(100);
 
-    expect(progress.onStep.mock.calls.length).toBe(1);
-    expect(progress.onStep.mock.calls[0][0]).toBe(11);
+    expect(progress.onStep.mock.calls.length).toBe(2);
+    expect(progress.onStep.mock.calls[0][0]).toBe(0);
+    expect(progress.onStep.mock.calls[1][0]).toBe(11);
     expect(writer.mock.calls.length).toBe(6);
     expect(writer.mock.calls[5][0]).toBe("#MD5:eJyLbvvVdeOLad0ScUXHJvHqFwBJWwf+\n");
 
@@ -226,8 +228,9 @@ test("download files using base64 mode", async () => {
     trzsz.addReceivedData("#DATA:eJwrSS0uUUjOzytJzSvhAgAkDwTm\n");
     await sleep(100);
 
-    expect(progress.onStep.mock.calls.length).toBe(1);
-    expect(progress.onStep.mock.calls[0][0]).toBe(13);
+    expect(progress.onStep.mock.calls.length).toBe(2);
+    expect(progress.onStep.mock.calls[0][0]).toBe(0);
+    expect(progress.onStep.mock.calls[1][0]).toBe(13);
     expect(writer.mock.calls.length).toBe(4);
     expect(writer.mock.calls[3][0]).toBe("#SUCC:13\n");
 
@@ -314,8 +317,9 @@ test("download files using binary mode", async () => {
     trzsz.addReceivedData(strToUint8("\x00\x01\xeeA\x03\x04\x05\x06\x07\x08\x09\x0A"));
     await sleep(100);
 
-    expect(progress.onStep.mock.calls.length).toBe(1);
-    expect(progress.onStep.mock.calls[0][0]).toBe(11);
+    expect(progress.onStep.mock.calls.length).toBe(2);
+    expect(progress.onStep.mock.calls[0][0]).toBe(0);
+    expect(progress.onStep.mock.calls[1][0]).toBe(11);
     expect(writer.mock.calls.length).toBe(4);
     expect(writer.mock.calls[3][0]).toBe("#SUCC:11\n");
 

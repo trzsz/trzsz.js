@@ -1,6 +1,6 @@
 /**
  * trzsz: https://github.com/trzsz/trzsz.js
- * Copyright(c) 2022 Lonny Wong <lonnywong@qq.com>
+ * Copyright(c) 2023 Lonny Wong <lonnywong@qq.com>
  * @license MIT
  */
 
@@ -34,10 +34,6 @@ export function getEllipsisString(str: string, max: number) {
 }
 
 function convertSizeToString(size: number): string {
-  if (size < 0) {
-    return "NaN";
-  }
-
   let unit = "B";
   do {
     if (size < 1024) {
@@ -66,19 +62,15 @@ function convertSizeToString(size: number): string {
   } while (false);
 
   if (size >= 100) {
-    return size.toFixed(0) + unit;
+    return `${size.toFixed(0)} ${unit}`
   } else if (size >= 10) {
-    return size.toFixed(1) + unit;
+    return `${size.toFixed(1)} ${unit}`
   } else {
-    return size.toFixed(2) + unit;
+    return `${size.toFixed(2)} ${unit}`
   }
 }
 
 function convertTimeToString(seconds: number) {
-  if (seconds < 0) {
-    return "NaN";
-  }
-
   let result = "";
   if (seconds >= 3600) {
     result += Math.floor(seconds / 3600).toString() + ":";
@@ -95,7 +87,7 @@ function convertTimeToString(seconds: number) {
   return result;
 }
 
-const kSpeedArraySize: number = 10;
+const kSpeedArraySize: number = 30;
 
 export class TextProgressBar implements ProgressCallback {
   private writer: (output: string) => void;
@@ -120,7 +112,7 @@ export class TextProgressBar implements ProgressCallback {
     tmuxPaneColumns: number | undefined = undefined
   ) {
     this.writer = writer;
-    this.tmuxPaneColumns = tmuxPaneColumns || -1;
+    this.tmuxPaneColumns = tmuxPaneColumns || 0;
     // -1 to avoid xterm.js messing up the tmux pane
     this.columns = this.tmuxPaneColumns > 1 ? this.tmuxPaneColumns - 1 : columns;
   }
@@ -129,7 +121,7 @@ export class TextProgressBar implements ProgressCallback {
     this.columns = columns;
     // resizing tmux panes is not supported
     if (this.tmuxPaneColumns > 0) {
-      this.tmuxPaneColumns = -1;
+      this.tmuxPaneColumns = 0;
     }
   }
 
@@ -146,6 +138,7 @@ export class TextProgressBar implements ProgressCallback {
     this.stepArray[0] = 0;
     this.speedCnt = 1;
     this.speedIdx = 1;
+    this.fileStep = -1;
   }
 
   public onSize(size: number) {
@@ -153,27 +146,34 @@ export class TextProgressBar implements ProgressCallback {
   }
 
   public onStep(step: number) {
+    if (step <= this.fileStep) {
+      return;
+    }
     this.fileStep = step;
     this.showProgress();
   }
 
   private showProgress() {
     const now = Date.now();
-    if (now - this.lastUpdateTime < 500) {
+    if (now - this.lastUpdateTime < 200) {
       return;
     }
     this.lastUpdateTime = now;
 
-    if (this.fileSize == 0) {
-      return;
+    let percentage = "100%";
+    if (this.fileSize != 0) {
+      percentage = Math.round((this.fileStep * 100) / this.fileSize).toString() + "%";
     }
-    const percentage = Math.round((this.fileStep * 100) / this.fileSize).toString() + "%";
     const total = convertSizeToString(this.fileStep);
     const speed = this.getSpeed(now);
-    const speedStr = convertSizeToString(speed) + "/s";
-    const eta = convertTimeToString(Math.round((this.fileSize - this.fileStep) / speed)) + " ETA";
+    let speedStr = "--- B/s";
+    let etaStr = "--- ETA";
+    if (speed > 0) {
+      speedStr = convertSizeToString(speed) + "/s";
+      etaStr = convertTimeToString(Math.round((this.fileSize - this.fileStep) / speed)) + " ETA";
+    }
 
-    const progressText = this.getProgressText(percentage, total, speedStr, eta);
+    const progressText = this.getProgressText(percentage, total, speedStr, etaStr);
 
     if (this.firstWrite) {
       this.firstWrite = false;
@@ -280,7 +280,10 @@ export class TextProgressBar implements ProgressCallback {
       return "";
     }
     const total = len - 2;
-    const complete = Math.round((total * this.fileStep) / this.fileSize);
+    let complete = total;
+    if (this.fileSize != 0) {
+      complete = Math.round((total * this.fileStep) / this.fileSize);
+    }
     return "[\u001b[36m" + "\u2588".repeat(complete) + "\u2591".repeat(total - complete) + "\u001b[0m]";
   }
 
