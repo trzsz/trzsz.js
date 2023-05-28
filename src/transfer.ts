@@ -136,7 +136,7 @@ export class TrzszTransfer {
   private async checkInteger(expect: number) {
     const result = await this.recvInteger("SUCC");
     if (result !== expect) {
-      throw new TrzszError(`[${result}] <> [${expect}]`, null, true);
+      throw new TrzszError(`Integer check [${result}] <> [${expect}]`, null, true);
     }
   }
 
@@ -152,7 +152,7 @@ export class TrzszTransfer {
   private async checkString(expect: string) {
     const result = await this.recvString("SUCC");
     if (result !== expect) {
-      throw new TrzszError(`[${result}] <> [${expect}]`, null, true);
+      throw new TrzszError(`String check [${result}] <> [${expect}]`, null, true);
     }
   }
 
@@ -168,11 +168,11 @@ export class TrzszTransfer {
   private async checkBinary(expect: Uint8Array) {
     const result = await this.recvBinary("SUCC");
     if (result.length != expect.length) {
-      throw new TrzszError(`[${result.length}] <> [${expect.length}]`, null, true);
+      throw new TrzszError(`Binary length check [${result.length}] <> [${expect.length}]`, null, true);
     }
     for (let i = 0; i < result.length; i++) {
       if (result[i] != expect[i]) {
-        throw new TrzszError(`[${result[i]}] <> [${expect[i]}]`, null, true);
+        throw new TrzszError(`Binary check [${result[i]}] <> [${expect[i]}]`, null, true);
       }
     }
   }

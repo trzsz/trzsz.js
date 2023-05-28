@@ -1,10 +1,10 @@
 /**
  * trzsz: https://github.com/trzsz/trzsz.js
- * Copyright(c) 2022 Lonny Wong <lonnywong@qq.com>
+ * Copyright(c) 2023 Lonny Wong <lonnywong@qq.com>
  * @license MIT
  */
 
-export {};
+export { };
 
 import { BufferSizeParser } from "./args";
 import { TrzszTransfer } from "./transfer";
@@ -137,7 +137,7 @@ async function main() {
       uniqueId += "00";
     }
 
-    process.stdout.write(`\x1b7\x07::TRZSZ:TRANSFER:S:${trzszVersion}:${uniqueId}\r\n`);
+    process.stdout.write(`\x1b7\x07::TRZSZ:TRANSFER:S:${trzszVersion}:${uniqueId.padStart(13, "0")}\r\n`);
 
     const transfer = new TrzszTransfer(realStdoutWriter as any, isRunningInWindows);
 

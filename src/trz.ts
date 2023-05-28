@@ -1,10 +1,10 @@
 /**
  * trzsz: https://github.com/trzsz/trzsz.js
- * Copyright(c) 2022 Lonny Wong <lonnywong@qq.com>
+ * Copyright(c) 2023 Lonny Wong <lonnywong@qq.com>
  * @license MIT
  */
 
-export {};
+export { };
 
 const path = require("path");
 import * as nodefs from "./nodefs";
@@ -129,7 +129,7 @@ async function main() {
     }
 
     const mode = args.directory ? "D" : "R";
-    process.stdout.write(`\x1b7\x07::TRZSZ:TRANSFER:${mode}:${trzszVersion}:${uniqueId}\r\n`);
+    process.stdout.write(`\x1b7\x07::TRZSZ:TRANSFER:${mode}:${trzszVersion}:${uniqueId.padStart(13, "0")}\r\n`);
 
     const transfer = new TrzszTransfer(realStdoutWriter as any, isRunningInWindows);
 
