@@ -13,13 +13,13 @@
   "author": "Lonny Wong",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^24.2.0",
-    "electron-builder": "^24.0.0"
+    "electron": "^25.2.0",
+    "electron-builder": "^24.4.0"
   },
   "dependencies": {
-    "node-pty": "^0.10.1",
+    "node-pty": "^1.0.0",
     "trzsz": "file:../..",
-    "xterm": "^5.1.0",
+    "xterm": "^5.2.1",
     "xterm-addon-fit": "^0.7.0"
   }
 }

@@ -22,6 +22,7 @@ import {
   setupConsoleOutput,
   TmuxMode,
   TrzszError,
+  formatSavedFiles,
 } from "./comm";
 
 /* eslint-disable require-jsdoc */
@@ -83,7 +84,7 @@ async function recvFiles(transfer: TrzszTransfer, args: any, tmuxMode: number, t
     const localNames = await transfer.recvFiles(saveParam, nodefs.openSaveFile, null);
 
     await transfer.recvExit();
-    await transfer.serverExit(`Received ${localNames.join(", ")} to ${args.path}`);
+    await transfer.serverExit(formatSavedFiles(localNames, args.path));
   } catch (err) {
     await transfer.serverError(err);
   } finally {

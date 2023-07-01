@@ -6,7 +6,7 @@
 
 import * as nodefs from "./nodefs";
 import * as browser from "./browser";
-import { TrzszError } from "./comm";
+import { TrzszError, formatSavedFiles } from "./comm";
 import { TrzszOptions } from "./options";
 import { TrzszTransfer } from "./transfer";
 import { TextProgressBar } from "./progress";
@@ -323,10 +323,10 @@ export class TrzszFilter {
     }
   }
 
-  private async handleTrzszDownloadFiles(version: string, remoteIsWindows: boolean) {
-    let savePath;
-    let saveParam;
-    let openSaveFile;
+  private async handleTrzszDownloadFiles(_version: string, remoteIsWindows: boolean) {
+    let savePath: string;
+    let saveParam: any;
+    let openSaveFile: any;
     if (isRunningInBrowser) {
       const saveDirHandle = await browser.selectSaveDirectory();
       if (!saveDirHandle) {
@@ -356,11 +356,11 @@ export class TrzszFilter {
 
     const localNames = await this.trzszTransfer.recvFiles(saveParam, openSaveFile, this.textProgressBar);
 
-    await this.trzszTransfer.clientExit(`Saved ${localNames.join(", ")} to ${savePath}`);
+    await this.trzszTransfer.clientExit(formatSavedFiles(localNames, savePath));
   }
 
-  private async handleTrzszUploadFiles(version: string, directory: boolean, remoteIsWindows: boolean) {
-    let sendFiles;
+  private async handleTrzszUploadFiles(_version: string, directory: boolean, remoteIsWindows: boolean) {
+    let sendFiles: TrzszFileReader[];
     if (this.uploadFilesList) {
       sendFiles = this.uploadFilesList;
       this.uploadFilesList = null;
@@ -389,6 +389,6 @@ export class TrzszFilter {
 
     const remoteNames = await this.trzszTransfer.sendFiles(sendFiles, this.textProgressBar);
 
-    await this.trzszTransfer.clientExit(`Received ${remoteNames.join(", ")}`);
+    await this.trzszTransfer.clientExit(formatSavedFiles(remoteNames, ""));
   }
 }

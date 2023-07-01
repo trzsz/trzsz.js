@@ -11,7 +11,7 @@ import { TrzszAddon } from "../src/addon";
 
 /* eslint-disable require-jsdoc */
 
-async function sleep(timeout) {
+async function sleep(timeout: number) {
   return new Promise((resolve) => setTimeout(resolve, timeout));
 }
 
@@ -79,7 +79,7 @@ test("trz upload files using addon", async () => {
       readFile: async () => {
         return strToUint8("test content\n");
       },
-      closeFile: () => {},
+      closeFile: () => { },
     },
   ]);
 
@@ -119,7 +119,7 @@ test("trz upload files using addon", async () => {
   expect(ws.send.mock.calls[3][0]).toBe("#SIZE:13\n");
   expect(ws.send.mock.calls[4][0]).toBe("#DATA:eJwrSS0uUUjOzytJzSvhAgAkDwTm\n");
   expect(ws.send.mock.calls[5][0]).toBe("#MD5:eJy79tqIQ6ZJ72rRdtb0pty5cwE+YAdb\n");
-  expect(ws.send.mock.calls[6][0]).toBe("#EXIT:eJwLSk1OzSxLTVEoSS0u0SupKNEzAABH6wb0\n");
+  expect(ws.send.mock.calls[6][0]).toBe("#EXIT:eJwLTixLTVEwVEjLzEnVT8ksSk0uyS+q5OXSVShJLS7RK6ko0TMAAOH+DBk=\n");
 
   onMessage({ data: "Received test.txt.0 to /tmp\n" });
 

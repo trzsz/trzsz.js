@@ -5,6 +5,7 @@
  */
 
 import { TextDecoder } from "util";
+// @ts-ignore
 global.TextDecoder = TextDecoder;
 
 import {
@@ -17,6 +18,7 @@ import {
   isArrayOfType,
   stripServerOutput,
   TrzszError,
+  formatSavedFiles,
 } from "../src/comm";
 
 test("zlib and base64 encode buffer", () => {
@@ -40,6 +42,7 @@ test("string and Uint8Array transform", async () => {
   expect(await uint8ToStr(strToUint8(str2))).toBe(str2);
   expect(await uint8ToStr(strToUint8("\xE4\xB8\xAD\xE6\x96\x87UTF8"), "utf8")).toBe("中文UTF8");
   const buffer = global.Buffer;
+  // @ts-ignore
   global.Buffer = undefined;
   try {
     expect(await uint8ToStr(strToUint8(str1))).toBe(str1);
@@ -124,7 +127,7 @@ test("is array of string", () => {
 });
 
 test("strip server output", () => {
-  function testStripServerOutput(output: string | null, result: string | null) {
+  function testStripServerOutput(output: string, result: string | null) {
     expect(stripServerOutput(output)).toBe(result);
     expect(stripServerOutput(strToUint8(output))).toBe(result);
     expect(stripServerOutput(strToArrBuf(output))).toBe(result);
@@ -144,4 +147,10 @@ test("strip server output", () => {
   expect(stripServerOutput(b)).toBe(b);
 
   expect(() => stripServerOutput("A".repeat(200000))).not.toThrow();
+});
+
+test("format saved files", () => {
+  expect(formatSavedFiles(["a.txt"], "/tmp")).toBe("Saved 1 file/directory to /tmp\r\n- a.txt");
+  expect(formatSavedFiles(["a.txt", "b.txt"], ".")).toBe("Saved 2 files/directories to .\r\n- a.txt\r\n- b.txt");
+  expect(formatSavedFiles(["a.txt", "b.txt"], "")).toBe("Saved 2 files/directories\r\n- a.txt\r\n- b.txt");
 });

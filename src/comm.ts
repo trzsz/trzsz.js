@@ -4,7 +4,7 @@
  * @license MIT
  */
 
-import * as Pako from "pako";
+import Pako from "pako";
 import * as Base64 from "base64-js";
 
 /**
@@ -14,7 +14,7 @@ export const trzszVersion = "[VersionInject]{version}[/VersionInject]";
 
 /* eslint-disable require-jsdoc */
 
-export const isRunningInWindows = (function () {
+export const isRunningInWindows = (function() {
   try {
     return process.platform === "win32";
   } catch (err) {
@@ -22,7 +22,7 @@ export const isRunningInWindows = (function () {
   }
 })();
 
-export const isRunningInBrowser = (function () {
+export const isRunningInBrowser = (function() {
   try {
     if (require.resolve("fs") === "fs") {
       require("fs");
@@ -267,7 +267,7 @@ export async function setStdinRaw() {
   if (!isRunningInWindows) {
     const spawn = require("child_process").spawn;
     const child = spawn("stty", ["-g"], { stdio: ["inherit", "pipe", "pipe"] });
-    child.stdout.on("data", (data) => {
+    child.stdout.on("data", (data: any) => {
       originalTtyMode += data.toString();
     });
     await new Promise((resolve) => child.on("exit", resolve));
@@ -284,6 +284,14 @@ export async function resetStdinTty() {
     const child = require("child_process").spawn("stty", [originalTtyMode], { stdio: "inherit" });
     await new Promise((resolve) => child.on("exit", resolve));
   }
+}
+
+export function formatSavedFiles(fileNames: string[], destPath: string): string {
+  let msg = `Saved ${fileNames.length} ${fileNames.length > 1 ? "files/directories" : "file/directory"}`;
+  if (destPath.length > 0) {
+    msg += ` to ${destPath}`;
+  }
+  return [msg].concat(fileNames).join("\r\n- ");
 }
 
 export function setupConsoleOutput() {
