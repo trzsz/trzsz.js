@@ -40,6 +40,10 @@ function parseArgs() {
   });
   parser.add_argument("-e", "--escape", { action: "store_true", help: "escape all known control characters" });
   parser.add_argument("-d", "--directory", { action: "store_true", help: "transfer directories and files" });
+  parser.add_argument("-r", "--recursive", {
+    action: "store_true",
+    help: "transfer directories and files, same as -d",
+  });
   parser.add_argument("-B", "--bufsize", {
     min_size: "1K",
     max_size: "1G",
@@ -55,7 +59,11 @@ function parseArgs() {
     help: "timeout ( N seconds ) for each buffer chunk.\nN <= 0 means never timeout. (default: 20)",
   });
   parser.add_argument("file", { nargs: "+", help: "file(s) to be sent" });
-  return parser.parse_args();
+  const args = parser.parse_args();
+  if (args.recursive === true) {
+    args.directory = true;
+  }
+  return args;
 }
 
 async function sendFiles(
