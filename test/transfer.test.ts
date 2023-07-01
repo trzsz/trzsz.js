@@ -10,7 +10,7 @@ import { strToUint8, uint8ToStr, decodeBuffer, TmuxMode, TrzszError } from "../s
 
 /* eslint-disable require-jsdoc */
 
-async function sleep(timeout) {
+async function sleep(timeout: number) {
   return new Promise((resolve) => setTimeout(resolve, timeout));
 }
 

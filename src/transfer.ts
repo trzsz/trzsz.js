@@ -20,6 +20,7 @@ import {
   TrzszFileReader,
   TrzszFileWriter,
   ProgressCallback,
+  stripTmuxStatusLine,
 } from "./comm";
 
 /* eslint-disable require-jsdoc */
@@ -105,6 +106,7 @@ export class TrzszTransfer {
       if (idx >= 0) {
         line = line.substring(idx);
       }
+      line = stripTmuxStatusLine(line);
     }
 
     return line;
@@ -190,7 +192,7 @@ export class TrzszTransfer {
 
   private async recvData(binary: boolean, escapeCodes: Array<number[]>, timeoutInMilliseconds: number) {
     return await Promise.race<Uint8Array>([
-      new Promise<Uint8Array>((resolve, reject) =>
+      new Promise<Uint8Array>((_resolve, reject) =>
         setTimeout(() => {
           this.cleanTimeoutInMilliseconds = 3000;
           reject(new TrzszError("Receive data timeout"));
@@ -261,7 +263,7 @@ export class TrzszTransfer {
     }
     let jsonStr = JSON.stringify(config);
     jsonStr = jsonStr.replace(/[\u007F-\uFFFF]/g, function (chr) {
-      return "\\u" + ("0000" + chr.charCodeAt(0).toString(16)).substr(-4);
+      return "\\u" + ("0000" + chr.charCodeAt(0).toString(16)).slice(-4);
     });
     this.transferConfig = config;
     await this.sendString("CFG", jsonStr);
@@ -420,7 +422,7 @@ export class TrzszTransfer {
     }
   }
 
-  public async sendFiles(files: TrzszFileReader[], progressCallback: ProgressCallback) {
+  public async sendFiles(files: TrzszFileReader[], progressCallback: ProgressCallback | null) {
     this.openedFiles.push(...files);
 
     const binary = this.transferConfig.binary === true;
@@ -535,7 +537,7 @@ export class TrzszTransfer {
     }
   }
 
-  public async recvFiles(saveParam: any, openSaveFile: OpenSaveFile, progressCallback: ProgressCallback) {
+  public async recvFiles(saveParam: any, openSaveFile: OpenSaveFile, progressCallback: ProgressCallback | null) {
     const binary = this.transferConfig.binary === true;
     const directory = this.transferConfig.directory === true;
     const overwrite = this.transferConfig.overwrite === true;

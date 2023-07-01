@@ -14,7 +14,7 @@ export const trzszVersion = "[VersionInject]{version}[/VersionInject]";
 
 /* eslint-disable require-jsdoc */
 
-export const isRunningInWindows = (function() {
+export const isRunningInWindows = (function () {
   try {
     return process.platform === "win32";
   } catch (err) {
@@ -22,7 +22,7 @@ export const isRunningInWindows = (function() {
   }
 })();
 
-export const isRunningInBrowser = (function() {
+export const isRunningInBrowser = (function () {
   try {
     if (require.resolve("fs") === "fs") {
       require("fs");
@@ -292,6 +292,27 @@ export function formatSavedFiles(fileNames: string[], destPath: string): string 
     msg += ` to ${destPath}`;
   }
   return [msg].concat(fileNames).join("\r\n- ");
+}
+
+export function stripTmuxStatusLine(buf: string): string {
+  while (true) {
+    const beginIdx = buf.indexOf("\x1bP=");
+    if (beginIdx < 0) {
+      return buf;
+    }
+    let bufIdx = beginIdx + 3;
+    const midIdx = buf.substring(bufIdx).indexOf("\x1bP=");
+    if (midIdx < 0) {
+      return buf.substring(0, beginIdx);
+    }
+    bufIdx += midIdx + 3;
+    const endIdx = buf.substring(bufIdx).indexOf("\x1b\\");
+    if (endIdx < 0) {
+      return buf.substring(0, beginIdx);
+    }
+    bufIdx += endIdx + 2;
+    buf = buf.substring(0, beginIdx) + buf.substring(bufIdx);
+  }
 }
 
 export function setupConsoleOutput() {

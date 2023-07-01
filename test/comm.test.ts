@@ -19,6 +19,7 @@ import {
   stripServerOutput,
   TrzszError,
   formatSavedFiles,
+  stripTmuxStatusLine,
 } from "../src/comm";
 
 test("zlib and base64 encode buffer", () => {
@@ -153,4 +154,16 @@ test("format saved files", () => {
   expect(formatSavedFiles(["a.txt"], "/tmp")).toBe("Saved 1 file/directory to /tmp\r\n- a.txt");
   expect(formatSavedFiles(["a.txt", "b.txt"], ".")).toBe("Saved 2 files/directories to .\r\n- a.txt\r\n- b.txt");
   expect(formatSavedFiles(["a.txt", "b.txt"], "")).toBe("Saved 2 files/directories\r\n- a.txt\r\n- b.txt");
+});
+
+test("strip tmux status line", () => {
+  const P = "\x1bP=1s\x1b\\\x1b[?25l\x1b[?12l\x1b[?25h\x1b[5 q\x1bP=2s\x1b\\";
+  expect(stripTmuxStatusLine("")).toBe("");
+  expect(stripTmuxStatusLine("ABC" + "123")).toBe("ABC123");
+  expect(stripTmuxStatusLine("ABC" + P + "123")).toBe("ABC123");
+  expect(stripTmuxStatusLine("ABC" + P + "123" + P + "XYZ")).toBe("ABC123XYZ");
+  expect(stripTmuxStatusLine("ABC" + P + "123" + P + P + P + "XYZ")).toBe("ABC123XYZ");
+  for (let i = 0; i < P.length - 2; i++) {
+    expect(stripTmuxStatusLine("ABC" + P + "123" + P.substring(0, P.length - i))).toBe("ABC123");
+  }
 });
