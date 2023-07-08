@@ -14,7 +14,7 @@ export const trzszVersion = "[VersionInject]{version}[/VersionInject]";
 
 /* eslint-disable require-jsdoc */
 
-export const isRunningInWindows = (function () {
+export const isRunningInWindows = (function() {
   try {
     return process.platform === "win32";
   } catch (err) {
@@ -22,7 +22,7 @@ export const isRunningInWindows = (function () {
   }
 })();
 
-export const isRunningInBrowser = (function () {
+export const isRunningInBrowser = (function() {
   try {
     if (require.resolve("fs") === "fs") {
       require("fs");
@@ -262,8 +262,13 @@ export function getTerminalColumns() {
 }
 
 let originalTtyMode = "";
+let changeStdinMode = false;
 
 export async function setStdinRaw() {
+  if (!process.stdin.isTTY) {
+    return;
+  }
+  changeStdinMode = true;
   if (!isRunningInWindows) {
     const spawn = require("child_process").spawn;
     const child = spawn("stty", ["-g"], { stdio: ["inherit", "pipe", "pipe"] });
@@ -279,9 +284,12 @@ export async function setStdinRaw() {
 }
 
 export async function resetStdinTty() {
+  if (!changeStdinMode) {
+    return;
+  }
   process.stdin.setRawMode(false);
   if (originalTtyMode && originalTtyMode.length) {
-    const child = require("child_process").spawn("stty", [originalTtyMode], { stdio: "inherit" });
+    const child = require("child_process").spawn("stty", [originalTtyMode], { stdio: ["inherit", "pipe", "pipe"] });
     await new Promise((resolve) => child.on("exit", resolve));
   }
 }

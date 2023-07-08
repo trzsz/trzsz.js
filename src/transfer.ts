@@ -90,6 +90,11 @@ export class TrzszTransfer {
       const idx = line.lastIndexOf("#" + expectType + ":");
       if (idx >= 0) {
         line = line.substring(idx);
+      } else {
+        const idx = line.lastIndexOf("#");
+        if (idx > 0) {
+          line = line.substring(idx);
+        }
       }
       return line;
     }
@@ -105,6 +110,11 @@ export class TrzszTransfer {
       const idx = line.lastIndexOf("#" + expectType + ":");
       if (idx >= 0) {
         line = line.substring(idx);
+      } else {
+        const idx = line.lastIndexOf("#");
+        if (idx > 0) {
+          line = line.substring(idx);
+        }
       }
       line = stripTmuxStatusLine(line);
     }
@@ -262,7 +272,7 @@ export class TrzszTransfer {
       config.tmux_pane_width = tmuxPaneWidth;
     }
     let jsonStr = JSON.stringify(config);
-    jsonStr = jsonStr.replace(/[\u007F-\uFFFF]/g, function (chr) {
+    jsonStr = jsonStr.replace(/[\u007F-\uFFFF]/g, function(chr) {
       return "\\u" + ("0000" + chr.charCodeAt(0).toString(16)).slice(-4);
     });
     this.transferConfig = config;
