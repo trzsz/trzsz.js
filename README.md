@@ -2,47 +2,57 @@
 
 Making webshell and terminal supports [trzsz](https://trzsz.github.io/) ( trz / tsz ), which similar to ( rz / sz ), and compatible with tmux.
 
+Website: [https://trzsz.github.io/js](https://trzsz.github.io/js) 　中文文档：[https://trzsz.github.io/cn/js](https://trzsz.github.io/cn/js)
+
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg?style=flat)](https://choosealicense.com/licenses/mit/)
 [![npmjs trzsz](https://img.shields.io/npm/v/trzsz.svg?style=flat)](https://www.npmjs.com/package/trzsz)
 
-***Please check [https://github.com/trzsz/trzsz](https://github.com/trzsz/trzsz) for more information of `trzsz`.***
+**_Please check [https://trzsz.github.io](https://trzsz.github.io) for more information of `trzsz`._**
 
 `trzsz.js` is the `js` version of `trzsz`, supports webshell running in browser, terminal built with electron, etc.
 
-
 ## Getting Started
 
-* Install the module
+- Install the module
+
   ```
   npm install trzsz
   ```
+
   or
+
   ```
   yarn add trzsz
   ```
 
-* Use in Node.js
+- Use in Node.js
+
   ```js
   import { TrzszFilter } from "trzsz";
   ```
+
   or
+
   ```js
   const { TrzszFilter } = require("trzsz");
   ```
 
-* Use in browser
+- Use in browser
+
   ```html
   <script src="node_modules/trzsz/lib/trzsz.js"></script>
   ```
 
-* Create `TrzszFilter` object
+- Create `TrzszFilter` object for each connection.
+
   ```js
   const trzszFilter = new TrzszFilter({
     // The trzsz options, see below
   });
   ```
 
-* Generally, the output of the server is forwarded to the terminal. Pass the output through `TrzszFilter`.
+- Generally, the output of the server is forwarded to the terminal. Pass the output through `TrzszFilter`.
+
   ```js
   const trzszFilter = new TrzszFilter({
     // The output will be forwarded back by TrzszFilter, unless the user runs ( trz / tsz ) on the server.
@@ -53,7 +63,8 @@ Making webshell and terminal supports [trzsz](https://trzsz.github.io/) ( trz / 
   webSocket.addEventListener("message", (ev) => trzszFilter.processServerOutput(ev.data));
   ```
 
-* Generally, the user input is forwarded to the server. Pass the user input through `TrzszFilter`.
+- Generally, the user input is forwarded to the server. Pass the user input through `TrzszFilter`.
+
   ```js
   const trzszFilter = new TrzszFilter({
     // The user input will be forwarded back by TrzszFilter, unless there are files being transferred.
@@ -66,7 +77,8 @@ Making webshell and terminal supports [trzsz](https://trzsz.github.io/) ( trz / 
   terminal.onBinary((data) => trzszFilter.processBinaryInput(data));
   ```
 
-* Let `TrzszFilter` know the terminal columns for rendering progress bar.
+- Let `TrzszFilter` know the terminal columns for rendering progress bar.
+
   ```js
   const trzszFilter = new TrzszFilter({
     // initialize the terminal columns
@@ -77,7 +89,8 @@ Making webshell and terminal supports [trzsz](https://trzsz.github.io/) ( trz / 
   terminal.onResize((size) => trzszFilter.setTerminalColumns(size.cols));
   ```
 
-* If there is a windows shell, such as `cmd` and `PowerShell`.
+- If the remote server is a Windows shell, such as `cmd` and `PowerShell`.
+
   ```js
   const trzszFilter = new TrzszFilter({
     // There is a windows shell
@@ -85,7 +98,8 @@ Making webshell and terminal supports [trzsz](https://trzsz.github.io/) ( trz / 
   });
   ```
 
-* If running in `Node.js` and `TrzszFilter` can `require('fs')`, `chooseSendFiles` and `chooseSaveDirectory` are required. If running in web browser, they will be ignored. Note that they are `async` functions.
+- If running in `Node.js` and `TrzszFilter` can `require('fs')`, `chooseSendFiles` and `chooseSaveDirectory` are required. If running in web browser, they will be ignored. Note that they are `async` functions.
+
   ```js
   const trzszFilter = new TrzszFilter({
     // call on the user runs trz ( upload files ) on the server and no error on require('fs').
@@ -105,7 +119,8 @@ Making webshell and terminal supports [trzsz](https://trzsz.github.io/) ( trz / 
   });
   ```
 
-* Support dragging files or directories to upload.
+- Support dragging files or directories to upload.
+
   ```js
   terminalHtmlElement.addEventListener("dragover", (event) => event.preventDefault());
   terminalHtmlElement.addEventListener("drop", (event) => {
@@ -117,37 +132,40 @@ Making webshell and terminal supports [trzsz](https://trzsz.github.io/) ( trz / 
   });
   ```
 
-* `TrzszAddon` is a wrapper for `TrzszFilter`. If you are using [xterm-addon-attach](https://www.npmjs.com/package/xterm-addon-attach), just replace `AttachAddon` with `TrzszAddon`.
+- `TrzszAddon` is a wrapper for `TrzszFilter`. If you are using [xterm-addon-attach](https://www.npmjs.com/package/xterm-addon-attach), just replace `AttachAddon` with `TrzszAddon`.
+
   ```js
-  import { Terminal } from 'xterm';
-  import { TrzszAddon } from 'trzsz';
+  import { Terminal } from "xterm";
+  import { TrzszAddon } from "trzsz";
 
   const terminal = new Terminal();
   const trzszAddon = new TrzszAddon(webSocket);
   terminal.loadAddon(trzszAddon);
   ```
 
-
 ## Examples
 
-* [Browser](https://github.com/trzsz/trzsz.js/blob/main/examples/browser) web shell example.
+- [Browser](https://github.com/trzsz/trzsz.js/blob/main/examples/browser) web shell example.
 
-* [Electron](https://github.com/trzsz/trzsz.js/blob/main/examples/electron) terminal app example.
+- [Electron](https://github.com/trzsz/trzsz.js/blob/main/examples/electron) terminal app example.
 
-* [TrzszAddon](https://github.com/trzsz/trzsz.js/blob/main/examples/addon) xterm addon example.
-
+- [TrzszAddon](https://github.com/trzsz/trzsz.js/blob/main/examples/addon) xterm addon example.
 
 ## Screenshot
 
 #### upload and download files in web browser
 
-  ![browser example](https://trzsz.github.io/images/browser.gif)
+![browser example](https://trzsz.github.io/images/browser.gif)
 
 #### upload and download files in electron app
 
-  ![electron example](https://trzsz.github.io/images/electron.gif)
-
+![electron example](https://trzsz.github.io/images/electron.gif)
 
 ## Contact
 
-  Feel free to email me <lonnywong@qq.com>.
+Feel free to email the author <lonnywong@qq.com>, or create an [issue](https://github.com/trzsz/trzsz.js/issues). Welcome to join the QQ group: 318578930.
+
+Want to buy the author a drink 🍺 ?
+
+![sponsor wechat qrcode](https://trzsz.github.io/images/sponsor_wechat.jpg)
+![sponsor alipay qrcode](https://trzsz.github.io/images/sponsor_alipay.jpg)

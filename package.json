@@ -40,7 +40,7 @@
   "bugs": {
     "url": "https://github.com/trzsz/trzsz.js/issues"
   },
-  "homepage": "https://trzsz.github.io/js/",
+  "homepage": "https://trzsz.github.io/js",
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.2",
     "@rollup/plugin-node-resolve": "^15.1.0",
