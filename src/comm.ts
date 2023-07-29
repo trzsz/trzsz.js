@@ -254,7 +254,32 @@ export async function checkTmux() {
 
   const fd = fs.openSync(tmuxTty, "w");
   const tmuxRealWriter = (data: string | Uint8Array) => fs.writeSync(fd, data);
+
+  const statusInterval = await getTmuxStatusInterval();
+  await setTmuxStatusInterval("0");
+  process.on("exit", async function() {
+    await setTmuxStatusInterval(statusInterval);
+  });
+
   return [TmuxMode.TmuxNormalMode, tmuxRealWriter, parseInt(paneWidth, 10)];
+}
+
+async function getTmuxStatusInterval() {
+  const exec = require("util").promisify(require("child_process").exec);
+  const out = await exec("tmux display-message -p '#{status-interval}'");
+  const output = out.stdout.trim();
+  if (!output) {
+    return "15"; // The default is 15 seconds
+  }
+  return output;
+}
+
+async function setTmuxStatusInterval(interval: string) {
+  if (!interval) {
+    interval = "15"; // The default is 15 seconds
+  }
+  const exec = require("util").promisify(require("child_process").exec);
+  await exec(`tmux setw status-interval ${interval}`);
 }
 
 export function getTerminalColumns() {
