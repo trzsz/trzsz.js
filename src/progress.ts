@@ -62,11 +62,11 @@ function convertSizeToString(size: number): string {
   } while (false);
 
   if (size >= 100) {
-    return `${size.toFixed(0)} ${unit}`
+    return `${size.toFixed(0)} ${unit}`;
   } else if (size >= 10) {
-    return `${size.toFixed(1)} ${unit}`
+    return `${size.toFixed(1)} ${unit}`;
   } else {
-    return `${size.toFixed(2)} ${unit}`
+    return `${size.toFixed(2)} ${unit}`;
   }
 }
 
@@ -189,7 +189,7 @@ export class TextProgressBar implements ProgressCallback {
   }
 
   private getSpeed(now: number): number {
-    let speed;
+    let speed: number;
     if (this.speedCnt <= kSpeedArraySize) {
       this.speedCnt++;
       speed = ((this.fileStep - this.stepArray[0]) * 1000) / (now - this.timeArray[0]);
@@ -288,13 +288,11 @@ export class TextProgressBar implements ProgressCallback {
   }
 
   public onDone() {
-    if (!this.firstWrite) {
-      if (this.tmuxPaneColumns > 0) {
-        this.writer(`\x1b[${this.columns}D`);
-      } else {
-        this.writer("\r");
-      }
-      this.firstWrite = true;
+    if (this.fileSize == 0) {
+      return;
     }
+    this.fileStep = this.fileSize;
+    this.lastUpdateTime = 0;
+    this.showProgress();
   }
 }

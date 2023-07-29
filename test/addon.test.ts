@@ -79,7 +79,7 @@ test("trz upload files using addon", async () => {
       readFile: async () => {
         return strToUint8("test content\n");
       },
-      closeFile: () => { },
+      closeFile: () => {},
     },
   ]);
 
@@ -125,7 +125,7 @@ test("trz upload files using addon", async () => {
 
   expect(term.write.mock.calls.length).toBe(4);
   expect(term.write.mock.calls[1][0]).toContain("test.txt [");
-  expect(term.write.mock.calls[2][0]).toBe("\r");
+  expect(term.write.mock.calls[2][0]).toContain("test.txt [");
   expect(term.write.mock.calls[3][0]).toBe("Received test.txt.0 to /tmp\n");
 
   ws.listener["close"]();
@@ -201,7 +201,7 @@ test("tsz download files using addon", async () => {
 
   expect(term.write.mock.calls.length).toBe(4);
   expect(term.write.mock.calls[1][0]).toContain("test.txt [");
-  expect(term.write.mock.calls[2][0]).toBe("\r");
+  expect(term.write.mock.calls[2][0]).toContain("test.txt [");
   expect(term.write.mock.calls[3][0]).toBe("Saved test.txt.0 to /tmp\n");
 
   expect(file.closeFile.mock.calls.length).toBeGreaterThanOrEqual(1);

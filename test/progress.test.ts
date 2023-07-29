@@ -15,7 +15,7 @@ function outputLength(str: string): number {
     .replace(/[\u4e00-\u9fa5]/g, "**").length;
 }
 
-let dateNowSpy;
+let dateNowSpy: any;
 
 beforeEach(() => {
   dateNowSpy = jest.spyOn(Date, "now");
@@ -106,7 +106,7 @@ test("progress bar newest speed", () => {
   for (let i = 0; i < 100; i++) {
     total += i * 10;
     const percentage = Math.round((total * 100) / 100000);
-    let speed;
+    let speed: number;
     if (i < 30) {
       speed = total / (i + 1);
     } else {
@@ -277,7 +277,9 @@ test("progress bar multiple files", () => {
   dateNowSpy
     .mockReturnValueOnce(1646564135000)
     .mockReturnValueOnce(1646564136000)
+    .mockReturnValueOnce(1646564136000)
     .mockReturnValueOnce(1646564137000)
+    .mockReturnValueOnce(1646564139000)
     .mockReturnValueOnce(1646564139000);
   const writer = jest.fn();
   const tgb = new TextProgressBar(writer, 100);
@@ -292,15 +294,23 @@ test("progress bar multiple files", () => {
   tgb.onStep(300);
   tgb.onDone();
   expect(writer.mock.calls.length).toBe(4);
-  expect(dateNowSpy.mock.calls.length).toBe(4);
+  expect(dateNowSpy.mock.calls.length).toBe(6);
+
   expect(writer.mock.calls[0][0]).toContain("(1/2) 中文😀test.txt [");
   expect(writer.mock.calls[0][0]).toContain("] 10% | 100 B | 100 B/s | 00:09 ETA");
   expect(outputLength(writer.mock.calls[0][0])).toBe(100);
-  expect(writer.mock.calls[1][0]).toBe("\r");
+
+  expect(writer.mock.calls[1][0]).toContain("(1/2) 中文😀test.txt [");
+  expect(writer.mock.calls[1][0]).toContain("] 100% | 1000 B | 1000 B/s | 00:00 ETA");
+  expect(outputLength(writer.mock.calls[1][0])).toBe(100);
+
   expect(writer.mock.calls[2][0]).toContain("(2/2) 英文😀test.txt [");
   expect(writer.mock.calls[2][0]).toContain("] 15% | 300 B | 150 B/s | 00:11 ETA");
   expect(outputLength(writer.mock.calls[2][0])).toBe(80);
-  expect(writer.mock.calls[3][0]).toBe("\r");
+
+  expect(writer.mock.calls[3][0]).toContain("(2/2) 英文😀test.txt [");
+  expect(writer.mock.calls[3][0]).toContain("] 100% | 1000 B/s | 00:00 ETA");
+  expect(outputLength(writer.mock.calls[3][0])).toBe(80);
 });
 
 test("progress bar in tmux pane", () => {
@@ -308,7 +318,9 @@ test("progress bar in tmux pane", () => {
     .mockReturnValueOnce(1646564135000)
     .mockReturnValueOnce(1646564136000)
     .mockReturnValueOnce(1646564137000)
+    .mockReturnValueOnce(1646564137000)
     .mockReturnValueOnce(1646564138000)
+    .mockReturnValueOnce(1646564139000)
     .mockReturnValueOnce(1646564139000);
   const writer = jest.fn();
   const tgb = new TextProgressBar(writer, 100, 80);
@@ -325,7 +337,7 @@ test("progress bar in tmux pane", () => {
   tgb.onDone();
 
   expect(writer.mock.calls.length).toBe(5);
-  expect(dateNowSpy.mock.calls.length).toBe(5);
+  expect(dateNowSpy.mock.calls.length).toBe(7);
   expect(writer.mock.calls[0][0]).not.toContain("\r");
   expect(writer.mock.calls[0][0]).not.toContain("\x1b[79D");
   expect(writer.mock.calls[0][0]).toContain("(1/2) 中文😀test.txt [");
@@ -340,13 +352,17 @@ test("progress bar in tmux pane", () => {
 
   expect(writer.mock.calls[2][0]).not.toContain("\r");
   expect(writer.mock.calls[2][0]).toContain("\x1b[79D");
+  expect(writer.mock.calls[2][0]).toContain("(1/2) 中文😀test.txt [");
+  expect(writer.mock.calls[2][0]).toContain("] 100% | 500 B/s | 00:00 ETA");
+  expect(outputLength(writer.mock.calls[2][0])).toBe(79);
 
   expect(writer.mock.calls[3][0]).toContain("(2/2) 中文😀test2.txt [");
   expect(writer.mock.calls[3][0]).toContain("] 30% | 300 B | 300 B/s | 00:02 ETA");
   expect(outputLength(writer.mock.calls[3][0])).toBe(120);
 
-  expect(writer.mock.calls[4][0]).toContain("\r");
-  expect(writer.mock.calls[4][0]).not.toContain("\x1b[79D");
+  expect(writer.mock.calls[4][0]).toContain("(2/2) 中文😀test2.txt [");
+  expect(writer.mock.calls[4][0]).toContain("] 100% | 1000 B | 1000 B/s | 00:00 ETA");
+  expect(outputLength(writer.mock.calls[4][0])).toBe(120);
 });
 
 test("get substring with max length", () => {
