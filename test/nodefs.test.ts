@@ -9,6 +9,7 @@ const fs = require("fs");
 const path = require("path");
 import { strToUint8 } from "../src/comm";
 import { checkPathWritable, checkPathsReadable, openSaveFile } from "../src/nodefs";
+import { TrzszFileReader } from "../src/comm";
 
 let tmpDir: string;
 let tmpFile: string;
@@ -50,13 +51,13 @@ test("require fs and path", () => {
   require("../src/nodefs");
 });
 
-test("check paths readable", () => {
+test("check paths readable", async () => {
   expect(checkPathsReadable(undefined)).toBe(undefined);
   expect(checkPathsReadable([])).toBe(undefined);
 
   fs.chmodSync(tmpFile, 0o444);
-  expect(checkPathsReadable([tmpFile]).length).toBe(1);
-  expect(checkPathsReadable([linkPath]).length).toBe(1);
+  expect(((await checkPathsReadable([tmpFile])) as TrzszFileReader[]).length).toBe(1);
+  expect(((await checkPathsReadable([linkPath])) as TrzszFileReader[]).length).toBe(1);
 
   expect(() => checkPathsReadable([notExistFile])).toThrowError("No such file");
   expect(() => checkPathsReadable([tmpFile, notExistFile])).toThrowError("No such file");
@@ -74,12 +75,12 @@ test("check paths readable", () => {
   }
 });
 
-test("check path writable", () => {
-  expect(checkPathWritable(undefined)).toBe(false);
-  expect(checkPathWritable(null)).toBe(false);
+test("check path writable", async () => {
+  expect(await checkPathWritable(undefined)).toBe(false);
+  expect(await checkPathWritable(null)).toBe(false);
 
   fs.chmodSync(tmpDir, 0o777);
-  expect(checkPathWritable(tmpDir)).toBe(true);
+  expect(await checkPathWritable(tmpDir)).toBe(true);
 
   expect(() => checkPathWritable(notExistFile)).toThrowError("No such directory");
   expect(() => checkPathWritable(tmpFile)).toThrowError("Not a directory");
@@ -97,7 +98,7 @@ test("open send files success", async () => {
   fs.writeSync(fd, "test file content");
   fs.closeSync(fd);
 
-  const tfr = checkPathsReadable([testPath])[0];
+  const tfr = await checkPathsReadable([testPath])[0];
 
   expect(tfr.getPathId()).toBe(0);
   expect(tfr.getRelPath()).toStrictEqual(["send.txt"]);
@@ -113,7 +114,7 @@ test("open send files success", async () => {
   expect(await tfr.readFile(buf)).toStrictEqual(strToUint8(""));
 
   tfr.closeFile();
-  await expect(tfr.readFile(buf)).rejects.toThrowError("File closed");
+  await expect(await tfr.readFile(buf)).rejects.toThrowError("File closed");
 });
 
 test("open send files error", async () => {
@@ -147,7 +148,7 @@ test("open save file success", async () => {
   const existsSync = fs.existsSync;
   fs.existsSync = jest.fn();
   fs.existsSync.mockReturnValue(true);
-  await expect(openSaveFile(saveParam, "save.txt", false, false)).rejects.toThrowError("Fail to assign new file name");
+  await expect(await openSaveFile(saveParam, "save.txt", false, false)).rejects.toThrowError("Fail to assign new file name");
   fs.existsSync = existsSync;
 });
 
@@ -160,14 +161,14 @@ test("open save file error", async () => {
   }
 
   fs.mkdirSync(path.join(tmpDir, "isdir"));
-  await expect(openSaveFile(saveParam, "isdir", false, true)).rejects.toThrowError("Is a directory");
+  await expect(await openSaveFile(saveParam, "isdir", false, true)).rejects.toThrowError("Is a directory");
 
   const openSync = fs.openSync;
   fs.openSync = jest.fn();
   fs.openSync.mockImplementation(() => {
     throw new Error("other error");
   });
-  await expect(openSaveFile(saveParam, "other.txt", false, false)).rejects.toThrowError("other error");
+  await expect(await openSaveFile(saveParam, "other.txt", false, false)).rejects.toThrowError("other error");
   fs.openSync = openSync;
 });
 
@@ -179,7 +180,7 @@ test("open directory success", async () => {
   fs.writeSync(fd, "test file content");
   fs.closeSync(fd);
 
-  const fileList = checkPathsReadable([testDir], true);
+  const fileList = await checkPathsReadable([testDir], true) as TrzszFileReader[];
   expect(fileList[0].getPathId()).toBe(0);
   expect(fileList[0].getRelPath()).toStrictEqual(["testdir"]);
   expect(fileList[0].isDir()).toBe(true);
