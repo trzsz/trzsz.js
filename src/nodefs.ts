@@ -48,7 +48,7 @@ promisify(
   ]
 );
 
-function fsExists (fp: string) {
+function fsExistsAsync (fp: string) {
   return fs.accessAsync(fp)
     .then(() => true)
     .catch(() => false)
@@ -59,7 +59,7 @@ export async function checkPathWritable(filePath: string) {
     return false;
   }
 
-  if (!await fsExists(filePath)) {
+  if (!await fsExistsAsync(filePath)) {
     throw new TrzszError(`No such directory: ${filePath}`);
   }
   const stats = await fs.statAsync(filePath);
@@ -177,7 +177,7 @@ export async function checkPathsReadable(
   const entries = filePaths.entries()
   for (const [idx, filePath] of entries) {
     const absPath = path.resolve(filePath);
-    if (!await fsExists(absPath)) {
+    if (!await fsExistsAsync(absPath)) {
       throw new TrzszError(`No such file: ${absPath}`);
     }
     const stats = await fs.statAsync(absPath);
@@ -232,19 +232,19 @@ class NodefsFileWriter implements TrzszFileWriter {
 }
 
 async function getNewName(savePath: string, fileName: string) {
-  if (!fsExists(path.join(savePath, fileName))) {
+  if (!fsExistsAsync(path.join(savePath, fileName))) {
     return fileName;
   }
   for (let i = 0; i < 1000; i++) {
     const saveName = `${fileName}.${i}`;
-    if (!await fsExists(path.join(savePath, saveName))) {
+    if (!await fsExistsAsync(path.join(savePath, saveName))) {
       return saveName;
     }
   }
   throw new TrzszError("Fail to assign new file name");
 }
 
-async function doCreateFile(absPath: string) {
+function doCreateFile(absPath: string) {
   try {
     return fs.openAsync(absPath, "w");
   } catch (err) {
@@ -258,7 +258,7 @@ async function doCreateFile(absPath: string) {
 }
 
 async function doCreateDirectory(absPath: string) {
-  if (!await fsExists(absPath)) {
+  if (!await fsExistsAsync(absPath)) {
     await fs.mkdirAsync(absPath, { recursive: true, mode: 0o755 });
   }
   const stats = await fs.statAsync(absPath);
