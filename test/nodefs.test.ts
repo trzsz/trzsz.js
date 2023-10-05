@@ -52,42 +52,42 @@ test("require fs and path", () => {
 });
 
 test("check paths readable", async () => {
-  expect(checkPathsReadable(undefined)).toBe(undefined);
-  expect(checkPathsReadable([])).toBe(undefined);
+  expect(await checkPathsReadable(undefined)).toBe(undefined);
+  expect(await checkPathsReadable([])).toBe(undefined);
 
   fs.chmodSync(tmpFile, 0o444);
   expect(((await checkPathsReadable([tmpFile])) as TrzszFileReader[]).length).toBe(1);
   expect(((await checkPathsReadable([linkPath])) as TrzszFileReader[]).length).toBe(1);
 
-  expect(() => checkPathsReadable([notExistFile])).toThrowError("No such file");
-  expect(() => checkPathsReadable([tmpFile, notExistFile])).toThrowError("No such file");
+  await expect(checkPathsReadable([notExistFile])).rejects.toThrowError("No such file");
+  await expect(checkPathsReadable([tmpFile, notExistFile])).rejects.toThrowError("No such file");
 
-  expect(() => checkPathsReadable([tmpDir])).toThrowError("Is a directory");
-  expect(() => checkPathsReadable([tmpFile, tmpDir])).toThrowError("Is a directory");
+  await expect(checkPathsReadable([tmpDir])).rejects.toThrowError("Is a directory");
+  await expect(checkPathsReadable([tmpFile, tmpDir])).rejects.toThrowError("Is a directory");
 
   if (process.platform !== "win32" && require("os").userInfo().uid != 0) {
-    expect(() => checkPathsReadable(["/dev/stdin"])).toThrowError("Not a regular file");
-    expect(() => checkPathsReadable([tmpFile, "/dev/stdin"])).toThrowError("Not a regular file");
+    await expect(checkPathsReadable(["/dev/stdin"])).rejects.toThrowError("Not a regular file");
+    await expect(checkPathsReadable([tmpFile, "/dev/stdin"])).rejects.toThrowError("Not a regular file");
 
     fs.chmodSync(tmpFile, 0o222);
-    expect(() => checkPathsReadable([tmpFile])).toThrowError("No permission to read");
+    await expect(checkPathsReadable([tmpFile])).rejects.toThrowError("No permission to read");
     fs.chmodSync(tmpFile, 0o444);
   }
 });
 
 test("check path writable", async () => {
-  expect(await checkPathWritable(undefined)).toBe(false);
-  expect(await checkPathWritable(null)).toBe(false);
+  expect(await checkPathWritable(undefined as any)).toBe(false);
+  expect(await checkPathWritable(null as any)).toBe(false);
 
   fs.chmodSync(tmpDir, 0o777);
   expect(await checkPathWritable(tmpDir)).toBe(true);
 
-  expect(() => checkPathWritable(notExistFile)).toThrowError("No such directory");
-  expect(() => checkPathWritable(tmpFile)).toThrowError("Not a directory");
+  await expect(checkPathWritable(notExistFile)).rejects.toThrowError("No such directory");
+  await expect(checkPathWritable(tmpFile)).rejects.toThrowError("Not a directory");
 
   if (process.platform !== "win32" && require("os").userInfo().uid != 0) {
     fs.chmodSync(tmpDir, 0o444);
-    expect(() => checkPathWritable(tmpDir)).toThrowError("No permission to write");
+    await expect(checkPathWritable(tmpDir)).rejects.toThrowError("No permission to write");
     fs.chmodSync(tmpDir, 0o777);
   }
 });
@@ -98,7 +98,7 @@ test("open send files success", async () => {
   fs.writeSync(fd, "test file content");
   fs.closeSync(fd);
 
-  const tfr = await checkPathsReadable([testPath])[0];
+  const tfr = ((await checkPathsReadable([testPath])) as TrzszFileReader[])[0];
 
   expect(tfr.getPathId()).toBe(0);
   expect(tfr.getRelPath()).toStrictEqual(["send.txt"]);
@@ -114,12 +114,12 @@ test("open send files success", async () => {
   expect(await tfr.readFile(buf)).toStrictEqual(strToUint8(""));
 
   tfr.closeFile();
-  await expect(await tfr.readFile(buf)).rejects.toThrowError("File closed");
+  await expect(tfr.readFile(buf)).rejects.toThrowError("File closed");
 });
 
 test("open send files error", async () => {
-  expect(() => checkPathsReadable([notExistFile])).toThrowError("No such file");
-  expect(() => checkPathsReadable([tmpFile, notExistFile])).toThrowError("No such file");
+  await expect(checkPathsReadable([notExistFile])).rejects.toThrowError("No such file");
+  await expect(checkPathsReadable([tmpFile, notExistFile])).rejects.toThrowError("No such file");
 });
 
 test("open save file success", async () => {
@@ -145,11 +145,10 @@ test("open save file success", async () => {
   tfr.closeFile();
   expect(fs.readFileSync(path.join(tmpDir, "save.txt")).toString()).toBe("test file content");
 
-  const existsSync = fs.existsSync;
-  fs.existsSync = jest.fn();
-  fs.existsSync.mockReturnValue(true);
-  await expect(await openSaveFile(saveParam, "save.txt", false, false)).rejects.toThrowError("Fail to assign new file name");
-  fs.existsSync = existsSync;
+  const exists = fs.exists;
+  fs.exists = (_path: string, callback: Function) => callback(true);
+  await expect(openSaveFile(saveParam, "save.txt", false, false)).rejects.toThrowError("Fail to assign new file name");
+  fs.exists = exists;
 });
 
 test("open save file error", async () => {
@@ -161,15 +160,12 @@ test("open save file error", async () => {
   }
 
   fs.mkdirSync(path.join(tmpDir, "isdir"));
-  await expect(await openSaveFile(saveParam, "isdir", false, true)).rejects.toThrowError("Is a directory");
+  await expect(openSaveFile(saveParam, "isdir", false, true)).rejects.toThrowError("Is a directory");
 
-  const openSync = fs.openSync;
-  fs.openSync = jest.fn();
-  fs.openSync.mockImplementation(() => {
-    throw new Error("other error");
-  });
-  await expect(await openSaveFile(saveParam, "other.txt", false, false)).rejects.toThrowError("other error");
-  fs.openSync = openSync;
+  const open = fs.open;
+  fs.open = (_path: string, _flags: string, callback: Function) => callback(new Error("other error"));
+  await expect(openSaveFile(saveParam, "other.txt", false, false)).rejects.toThrowError("other error");
+  fs.open = open;
 });
 
 test("open directory success", async () => {
@@ -180,7 +176,7 @@ test("open directory success", async () => {
   fs.writeSync(fd, "test file content");
   fs.closeSync(fd);
 
-  const fileList = await checkPathsReadable([testDir], true) as TrzszFileReader[];
+  const fileList = (await checkPathsReadable([testDir], true)) as TrzszFileReader[];
   expect(fileList[0].getPathId()).toBe(0);
   expect(fileList[0].getRelPath()).toStrictEqual(["testdir"]);
   expect(fileList[0].isDir()).toBe(true);
@@ -209,7 +205,7 @@ test("open directory error", async () => {
   if (process.platform !== "win32") {
     const linkDir = path.join(testDir, "link");
     fs.symlinkSync(testDir, linkDir);
-    expect(() => checkPathsReadable([testDir], true)).toThrowError("Duplicate link");
+    await expect(checkPathsReadable([testDir], true)).rejects.toThrowError("Duplicate link");
   }
 });
 
@@ -280,7 +276,7 @@ test("save directory error", async () => {
   const fileName = {
     path_id: 0,
     path_name: ["a"],
-    is_dir: true,
+    is_dir: true as boolean | undefined,
   };
   const saveParam = { path: testDir, maps: new Map<string, string>() };
   await expect(openSaveFile(saveParam, JSON.stringify(fileName), true, true)).rejects.toThrowError("Not a directory");

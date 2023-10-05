@@ -9,49 +9,52 @@ const fs = requireSafely("fs");
 const path = requireSafely("path");
 import { TrzszError, TrzszFileReader, TrzszFileWriter } from "./comm";
 
-function requireSafely(name) {
+function requireSafely(name: string) {
   try {
     return require(name);
   } catch (err) {
-    return undefined;
+    return {};
   }
 }
 
-function promisify (fs: any, funcs: string[]) {
+function promisify(fs: any, funcs: string[]) {
   for (const func of funcs) {
-    fs[func + 'Async'] = (...args) => {
+    fs[func + "Async"] = (...args: any) => {
       return new Promise((resolve, reject) => {
-        fs[func](...args, (err, data) => {
+        fs[func](...args, (err: Error, data: any) => {
           if (err) {
-            return reject(err);
+            reject(err);
           } else {
-            resolve(data || true);
+            resolve(data);
           }
-        })
-      })
-    }
+        });
+      });
+    };
   }
 }
 
-promisify(
-  fs,
-  [
-    'stat',
-    'access',
-    'mkdir',
-    'readdir',
-    'read',
-    'close',
-    'open',
-    'realpath',
-    'write'
-  ]
-);
+promisify(fs, ["stat", "access", "mkdir", "readdir", "close", "open", "realpath", "write"]);
 
-function fsExistsAsync (fp: string) {
-  return fs.accessAsync(fp)
-    .then(() => true)
-    .catch(() => false)
+async function fsExists(path: string) {
+  return new Promise((resolve) => fs.exists(path, (exists: boolean) => resolve(exists)));
+}
+
+async function fsRead(
+  fd: number,
+  buffer: Uint8Array,
+  offset: number,
+  length: number,
+  position: number | null,
+): Promise<Uint8Array> {
+  return new Promise((resolve, reject) =>
+    fs.read(fd, buffer, offset, length, position, (err: Error, bytesRead: number, buffer: Buffer) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(buffer.subarray(0, bytesRead));
+      }
+    }),
+  );
 }
 
 export async function checkPathWritable(filePath: string) {
@@ -59,7 +62,7 @@ export async function checkPathWritable(filePath: string) {
     return false;
   }
 
-  if (!await fsExistsAsync(filePath)) {
+  if (!(await fsExists(filePath))) {
     throw new TrzszError(`No such directory: ${filePath}`);
   }
   const stats = await fs.statAsync(filePath);
@@ -116,8 +119,7 @@ class NodefsFileReader implements TrzszFileReader {
       this.fd = await fs.openAsync(this.absPath, "r");
     }
     const uint8 = new Uint8Array(buf);
-    const n = await fs.readAsync(this.fd, uint8, 0, uint8.length, null);
-    return uint8.subarray(0, n);
+    return fsRead(this.fd, uint8, 0, uint8.length, null);
   }
 
   public async closeFile() {
@@ -137,7 +139,7 @@ async function checkPathReadable(
   stats: any,
   fileList: NodefsFileReader[],
   relPath: string[],
-  visitedDir: Set<string>
+  visitedDir: Set<string>,
 ) {
   if (!stats.isDirectory()) {
     if (!stats.isFile()) {
@@ -158,26 +160,26 @@ async function checkPathReadable(
   }
   visitedDir.add(realPath);
   fileList.push(new NodefsFileReader(pathId, absPath, relPath, true, 0));
-  const arr = await fs.readdirAsync(absPath)
+  const arr = await fs.readdirAsync(absPath);
   for (const file of arr) {
     const filePath = path.join(absPath, file);
-    const stat = await fs.statAsync(filePath)
+    const stat = await fs.statAsync(filePath);
     await checkPathReadable(pathId, filePath, stat, fileList, [...relPath, file], visitedDir);
   }
 }
 
 export async function checkPathsReadable(
   filePaths: string[] | undefined,
-  directory: boolean = false
+  directory: boolean = false,
 ): Promise<TrzszFileReader[] | undefined> {
   if (!filePaths || !filePaths.length) {
     return undefined;
   }
   const fileList: NodefsFileReader[] = [];
-  const entries = filePaths.entries()
+  const entries = filePaths.entries();
   for (const [idx, filePath] of entries) {
     const absPath = path.resolve(filePath);
-    if (!await fsExistsAsync(absPath)) {
+    if (!(await fsExists(absPath))) {
       throw new TrzszError(`No such file: ${absPath}`);
     }
     const stats = await fs.statAsync(absPath);
@@ -197,7 +199,7 @@ class NodefsFileWriter implements TrzszFileWriter {
   private dir: boolean;
   private closed: boolean = false;
 
-  constructor(fileName, localName: string, fd: number | null, dir: boolean = false) {
+  constructor(fileName: string, localName: string, fd: number | null, dir: boolean = false) {
     this.fileName = fileName;
     this.localName = localName;
     this.fd = fd;
@@ -232,21 +234,21 @@ class NodefsFileWriter implements TrzszFileWriter {
 }
 
 async function getNewName(savePath: string, fileName: string) {
-  if (!fsExistsAsync(path.join(savePath, fileName))) {
+  if (!(await fsExists(path.join(savePath, fileName)))) {
     return fileName;
   }
   for (let i = 0; i < 1000; i++) {
     const saveName = `${fileName}.${i}`;
-    if (!await fsExistsAsync(path.join(savePath, saveName))) {
+    if (!(await fsExists(path.join(savePath, saveName)))) {
       return saveName;
     }
   }
   throw new TrzszError("Fail to assign new file name");
 }
 
-function doCreateFile(absPath: string) {
+async function doCreateFile(absPath: string) {
   try {
-    return fs.openAsync(absPath, "w");
+    return await fs.openAsync(absPath, "w");
   } catch (err) {
     if (err.errno === -13 || err.errno === -4048) {
       throw new TrzszError(`No permission to write: ${absPath}`);
@@ -258,7 +260,7 @@ function doCreateFile(absPath: string) {
 }
 
 async function doCreateDirectory(absPath: string) {
-  if (!await fsExistsAsync(absPath)) {
+  if (!(await fsExists(absPath))) {
     await fs.mkdirAsync(absPath, { recursive: true, mode: 0o755 });
   }
   const stats = await fs.statAsync(absPath);
@@ -267,7 +269,7 @@ async function doCreateDirectory(absPath: string) {
   }
 }
 
-async function createFile(savePath, fileName: string, overwrite: boolean) {
+async function createFile(savePath: string, fileName: string, overwrite: boolean) {
   const localName = overwrite ? fileName : await getNewName(savePath, fileName);
   const fd = await doCreateFile(path.join(savePath, localName));
   return new NodefsFileWriter(fileName, localName, fd);
