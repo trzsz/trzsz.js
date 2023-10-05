@@ -5,9 +5,7 @@
  */
 
 /* eslint-disable require-jsdoc */
-
-const fs = requireSafely("fs/promises");
-const fso = requireSafely("fs");
+const fs = requireSafely("fs");
 const path = requireSafely("path");
 import { TrzszError, TrzszFileReader, TrzszFileWriter } from "./comm";
 
@@ -19,8 +17,41 @@ function requireSafely(name) {
   }
 }
 
-function checkExist (path: string) {
-  return fs.access(path).then(() => true).catch(() => false);
+function promisify (fs: any, funcs: string[]) {
+  for (const func of funcs) {
+    fs[func + 'Async'] = (...args) => {
+      return new Promise((resolve, reject) => {
+        fs[func](...args, (err, data) => {
+          if (err) {
+            return reject(err);
+          } else {
+            resolve(data || true);
+          }
+        })
+      })
+    }
+  }
+}
+
+promisify(
+  fs,
+  [
+    'stat',
+    'access',
+    'mkdir',
+    'readdir',
+    'read',
+    'close',
+    'open',
+    'realpath',
+    'write'
+  ]
+);
+
+function fsExists (fp: string) {
+  return fs.accessAsync(fp)
+    .then(() => true)
+    .catch(() => false)
 }
 
 export async function checkPathWritable(filePath: string) {
@@ -28,15 +59,15 @@ export async function checkPathWritable(filePath: string) {
     return false;
   }
 
-  if (!await checkExist(filePath)) {
+  if (!await fsExists(filePath)) {
     throw new TrzszError(`No such directory: ${filePath}`);
   }
-  const stats = await fs.stat(filePath);
+  const stats = await fs.statAsync(filePath);
   if (!stats.isDirectory()) {
     throw new TrzszError(`Not a directory: ${filePath}`);
   }
   try {
-    fs.access(filePath, fs.constants.W_OK);
+    await fs.accessAsync(filePath, fs.constants.W_OK);
   } catch (err) {
     throw new TrzszError(`No permission to write: ${filePath}`);
   }
@@ -82,10 +113,10 @@ class NodefsFileReader implements TrzszFileReader {
       throw new TrzszError(`File closed: ${this.absPath}`, null, true);
     }
     if (this.fd === null) {
-      this.fd = await fso.openSync(this.absPath, "r");
+      this.fd = await fs.openAsync(this.absPath, "r");
     }
     const uint8 = new Uint8Array(buf);
-    const n = await fso.readSync(this.fd, uint8, 0, uint8.length, null);
+    const n = await fs.readAsync(this.fd, uint8, 0, uint8.length, null);
     return uint8.subarray(0, n);
   }
 
@@ -93,7 +124,7 @@ class NodefsFileReader implements TrzszFileReader {
     if (!this.closed) {
       this.closed = true;
       if (this.fd !== null) {
-        await fso.closeSync(this.fd);
+        await fs.closeAsync(this.fd);
         this.fd = null;
       }
     }
@@ -113,7 +144,7 @@ async function checkPathReadable(
       throw new TrzszError(`Not a regular file: ${absPath}`);
     }
     try {
-      await fs.access(absPath, fs.constants.R_OK);
+      await fs.accessAsync(absPath, fs.constants.R_OK);
     } catch (err) {
       throw new TrzszError(`No permission to read: ${absPath}`);
     }
@@ -121,16 +152,16 @@ async function checkPathReadable(
     return;
   }
 
-  const realPath = await fs.realpath(absPath);
+  const realPath = await fs.realpathAsync(absPath);
   if (visitedDir.has(realPath)) {
     throw new TrzszError(`Duplicate link: ${absPath}`);
   }
   visitedDir.add(realPath);
   fileList.push(new NodefsFileReader(pathId, absPath, relPath, true, 0));
-  const arr = await fs.readdir(absPath)
+  const arr = await fs.readdirAsync(absPath)
   for (const file of arr) {
     const filePath = path.join(absPath, file);
-    const stat = await fs.stat(filePath)
+    const stat = await fs.statAsync(filePath)
     await checkPathReadable(pathId, filePath, stat, fileList, [...relPath, file], visitedDir);
   }
 }
@@ -146,10 +177,10 @@ export async function checkPathsReadable(
   const entries = filePaths.entries()
   for (const [idx, filePath] of entries) {
     const absPath = path.resolve(filePath);
-    if (!await checkExist(absPath)) {
+    if (!await fsExists(absPath)) {
       throw new TrzszError(`No such file: ${absPath}`);
     }
-    const stats = await fs.stat(absPath);
+    const stats = await fs.statAsync(absPath);
     if (!directory && stats.isDirectory()) {
       throw new TrzszError(`Is a directory: ${absPath}`);
     }
@@ -186,14 +217,14 @@ class NodefsFileWriter implements TrzszFileWriter {
   }
 
   public async writeFile(buf: Uint8Array) {
-    await fs.writeSync(this.fd, buf);
+    await fs.writeAsync(this.fd, buf);
   }
 
   public async closeFile() {
     if (!this.closed) {
       this.closed = true;
       if (this.fd !== null) {
-        await fso.closeSync(this.fd);
+        await fs.closeAsync(this.fd);
         this.fd = null;
       }
     }
@@ -201,12 +232,12 @@ class NodefsFileWriter implements TrzszFileWriter {
 }
 
 async function getNewName(savePath: string, fileName: string) {
-  if (!checkExist(path.join(savePath, fileName))) {
+  if (!fsExists(path.join(savePath, fileName))) {
     return fileName;
   }
   for (let i = 0; i < 1000; i++) {
     const saveName = `${fileName}.${i}`;
-    if (!await checkExist(path.join(savePath, saveName))) {
+    if (!await fsExists(path.join(savePath, saveName))) {
       return saveName;
     }
   }
@@ -215,7 +246,7 @@ async function getNewName(savePath: string, fileName: string) {
 
 async function doCreateFile(absPath: string) {
   try {
-    return fso.openSync(absPath, "w");
+    return fs.openAsync(absPath, "w");
   } catch (err) {
     if (err.errno === -13 || err.errno === -4048) {
       throw new TrzszError(`No permission to write: ${absPath}`);
@@ -227,10 +258,10 @@ async function doCreateFile(absPath: string) {
 }
 
 async function doCreateDirectory(absPath: string) {
-  if (!await checkExist(absPath)) {
-    await fs.mkdir(absPath, { recursive: true, mode: 0o755 });
+  if (!await fsExists(absPath)) {
+    await fs.mkdirAsync(absPath, { recursive: true, mode: 0o755 });
   }
-  const stats = await fs.stat(absPath);
+  const stats = await fs.statAsync(absPath);
   if (!stats.isDirectory()) {
     throw new TrzszError(`Not a directory: ${absPath}`);
   }

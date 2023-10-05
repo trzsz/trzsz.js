@@ -107,3 +107,4 @@ dist
 lib/
 *.swp
 *.swo
+/temp
