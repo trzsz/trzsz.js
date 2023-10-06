@@ -145,10 +145,10 @@ test("open save file success", async () => {
   tfr.closeFile();
   expect(fs.readFileSync(path.join(tmpDir, "save.txt")).toString()).toBe("test file content");
 
-  const exists = fs.exists;
-  fs.exists = (_path: string, callback: Function) => callback(true);
+  const access = fs.access;
+  fs.access = (_path: string, mode: Function, callback: Function) => (callback ? callback(null) : mode(null));
   await expect(openSaveFile(saveParam, "save.txt", false, false)).rejects.toThrowError("Fail to assign new file name");
-  fs.exists = exists;
+  fs.access = access;
 });
 
 test("open save file error", async () => {

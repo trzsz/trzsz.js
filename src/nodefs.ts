@@ -35,8 +35,8 @@ function promisify(fs: any, funcs: string[]) {
 
 promisify(fs, ["stat", "access", "mkdir", "readdir", "close", "open", "realpath", "write"]);
 
-async function fsExists(path: string) {
-  return new Promise((resolve) => fs.exists(path, (exists: boolean) => resolve(exists)));
+async function fsExists(path: string): Promise<boolean> {
+  return new Promise((resolve) => fs.access(path, (err: Error) => resolve(!err)));
 }
 
 async function fsRead(
