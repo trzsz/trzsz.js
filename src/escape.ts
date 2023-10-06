@@ -12,7 +12,7 @@ export function getEscapeChars(escapeAll: boolean): Array<string[]> {
     ["\x7e", "\xee\x31"],
   ];
   if (escapeAll) {
-    const chars = "\x02\x10\x1b\x1d\x9d";
+    const chars = "\x02\x0d\x10\x11\x13\x18\x1b\x1d\x8d\x90\x91\x93\x9d";
     for (let i = 0; i < chars.length; i++) {
       escapeChars.push([chars[i], "\xee" + String.fromCharCode(0x41 + i)]);
     }

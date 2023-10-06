@@ -28,9 +28,8 @@ export const isRunningInBrowser = (function() {
       require("fs");
       return false;
     }
-  } catch (err) {
-    return true;
-  }
+  } catch (err) { }
+  return true;
 })();
 
 export function strToUint8(str: string): Uint8Array {
@@ -139,7 +138,7 @@ export type OpenSaveFile = (
   saveParam: any,
   fileName: string,
   directory: boolean,
-  overwrite: boolean
+  overwrite: boolean,
 ) => Promise<TrzszFileWriter>;
 
 export interface ProgressCallback {

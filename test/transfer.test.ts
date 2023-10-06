@@ -115,8 +115,9 @@ test("upload files using binary mode", async () => {
   file.readFile.mockReturnValueOnce(strToUint8("\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0A"));
 
   trzsz.addReceivedData(
-    "junk\r\n#CFG:eJxNzzsOwjAMgOGrRJ47OBULbLxOESKUFgORoFR5DAXB2XEokrP5/+TBfsHNDRdYKRgnaBR0fnBh4k4hEzfF3o10" +
-      "7K8uRFZj4JARicruPP3bNsrAR1jPUgJb4bWwRuFNxZ3wtuKT8E54WfEerC0v5HP0T+JrNbYLhuTv9MjpB/j+AivBQi0=\n"
+    "junk\r\n#CFG:eJxF0LsOwjAMBdB/8ZwhKQwlG+/3F4QIpcWFIigoaQZA8O20FNmb75FlXfkFF1cdQcM5gICsrJx/gK59RAEYcnfHfX5y" +
+    "PoA2BnZRSsRmrxv+0QoDH0L1y+0sE8Jhh55gRFtKEo4ZFeGEsUc4ZUwJZ4wZ4ZzxQLggTBmXhAOutGLkSmtGrrRh5JtbsLb5aixC+UTQS" +
+    "iZ9AXV5xVus2yjfX3gwanQ=\n",
   );
   const config = await trzsz.recvConfig();
   expect(config.binary).toBe(true);
@@ -276,8 +277,9 @@ test("download files using binary mode", async () => {
   const trzsz = new TrzszTransfer(writer);
 
   trzsz.addReceivedData(
-    "junk\r\n#CFG:eJxNzzsOwjAMgOGrRJ47OBULbLxOESKUFgORoFR5DAXB2XEokrP5/+TBfsHNDRdYKRgnaBR0fnBh4k4hEzfF3o10" +
-      "7K8uRFZj4JARicruPP3bNsrAR1jPUgJb4bWwRuFNxZ3wtuKT8E54WfEerC0v5HP0T+JrNbYLhuTv9MjpB/j+AivBQi0=\n"
+    "junk\r\n#CFG:eJxF0LsOwjAMBdB/8ZwhKQwlG+/3F4QIpcWFIigoaQZA8O20FNmb75FlXfkFF1cdQcM5gICsrJx/gK59RAEYcnfHfX5y" +
+    "PoA2BnZRSsRmrxv+0QoDH0L1y+0sE8Jhh55gRFtKEo4ZFeGEsUc4ZUwJZ4wZ4ZzxQLggTBmXhAOutGLkSmtGrrRh5JtbsLb5aixC+UTQS" +
+    "iZ9AXV5xVus2yjfX3gwanQ=\n",
   );
   const config = await trzsz.recvConfig();
   expect(config.binary).toBe(true);
@@ -568,10 +570,18 @@ test("send config to remote", async () => {
   expect(cfgStr).toContain('["\\u00ee","\\u00ee\\u00ee"]');
   expect(cfgStr).toContain('["~","\\u00ee1"]');
   expect(cfgStr).toContain('["\\u0002","\\u00eeA"]');
-  expect(cfgStr).toContain('["\\u0010","\\u00eeB"]');
-  expect(cfgStr).toContain('["\\u001b","\\u00eeC"]');
-  expect(cfgStr).toContain('["\\u001d","\\u00eeD"]');
-  expect(cfgStr).toContain('["\\u009d","\\u00eeE"]');
+  expect(cfgStr).toContain('["\\r","\\u00eeB"]');
+  expect(cfgStr).toContain('["\\u0010","\\u00eeC"]');
+  expect(cfgStr).toContain('["\\u0011","\\u00eeD"]');
+  expect(cfgStr).toContain('["\\u0013","\\u00eeE"]');
+  expect(cfgStr).toContain('["\\u0018","\\u00eeF"]');
+  expect(cfgStr).toContain('["\\u001b","\\u00eeG"]');
+  expect(cfgStr).toContain('["\\u001d","\\u00eeH"]');
+  expect(cfgStr).toContain('["\\u008d","\\u00eeI"]');
+  expect(cfgStr).toContain('["\\u0090","\\u00eeJ"]');
+  expect(cfgStr).toContain('["\\u0091","\\u00eeK"]');
+  expect(cfgStr).toContain('["\\u0093","\\u00eeL"]');
+  expect(cfgStr).toContain('["\\u009d","\\u00eeM"]');
   const config = JSON.parse(cfgStr);
   expect(config.quiet).toBe(true);
   expect(config.binary).toBe(true);

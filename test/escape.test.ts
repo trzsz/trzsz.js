@@ -42,15 +42,23 @@ test("escape chars to codes", () => {
 test("escape data", () => {
   const escapeChars = getEscapeChars(true);
   const escapeCodes = escapeCharsToCodes(escapeChars);
-  const data = strToUint8("\xee\x7e\x02\x10A");
-  expect(escapeData(data, [])).toStrictEqual(strToUint8("\xee\x7e\x02\x10A"));
-  expect(escapeData(data, escapeCodes)).toStrictEqual(strToUint8("\xee\xee\xee\x31\xee\x41\xee\x42A"));
+  const data = strToUint8("\xee\x7e\x02\x0d\x10\x11\x13\x18\x1b\x1d\x8d\x90\x91\x93\x9dA");
+  expect(escapeData(data, [])).toStrictEqual(
+    strToUint8("\xee\x7e\x02\x0d\x10\x11\x13\x18\x1b\x1d\x8d\x90\x91\x93\x9dA"),
+  );
+  expect(escapeData(data, escapeCodes)).toStrictEqual(
+    strToUint8("\xee\xee\xee1\xeeA\xeeB\xeeC\xeeD\xeeE\xeeF\xeeG\xeeH\xeeI\xeeJ\xeeK\xeeL\xeeMA"),
+  );
 });
 
 test("unescape data", () => {
   const escapeChars = getEscapeChars(true);
   const escapeCodes = escapeCharsToCodes(escapeChars);
-  const data = strToUint8("\xee\xee\xee\x31\xee\x41\xee\x42A");
-  expect(unescapeData(data, [])).toStrictEqual(strToUint8("\xee\xee\xee\x31\xee\x41\xee\x42A"));
-  expect(unescapeData(data, escapeCodes)).toStrictEqual(strToUint8("\xee\x7e\x02\x10A"));
+  const data = strToUint8("\xee\xee\xee1\xeeA\xeeB\xeeC\xeeD\xeeE\xeeF\xeeG\xeeH\xeeI\xeeJ\xeeK\xeeL\xeeMA");
+  expect(unescapeData(data, [])).toStrictEqual(
+    strToUint8("\xee\xee\xee1\xeeA\xeeB\xeeC\xeeD\xeeE\xeeF\xeeG\xeeH\xeeI\xeeJ\xeeK\xeeL\xeeMA"),
+  );
+  expect(unescapeData(data, escapeCodes)).toStrictEqual(
+    strToUint8("\xee\x7e\x02\x0d\x10\x11\x13\x18\x1b\x1d\x8d\x90\x91\x93\x9dA"),
+  );
 });
