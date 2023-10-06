@@ -204,7 +204,7 @@ export class TrzszFilter {
     if (items instanceof DataTransferItemList) {
       this.uploadFilesList = await parseDataTransferItemList(items as DataTransferItemList);
     } else if (isArrayOfType(items, "string") && !isRunningInBrowser) {
-      this.uploadFilesList = nodefs.checkPathsReadable(items as string[], true);
+      this.uploadFilesList = await nodefs.checkPathsReadable(items as string[], true);
     } else {
       throw new Error("The upload items type is not supported");
     }
@@ -342,7 +342,7 @@ export class TrzszFilter {
         await this.trzszTransfer.sendAction(false, remoteIsWindows);
         return;
       }
-      nodefs.checkPathWritable(savePath);
+      await nodefs.checkPathWritable(savePath);
       saveParam = { path: savePath, maps: new Map<string, string>() };
       openSaveFile = nodefs.openSaveFile;
     }
@@ -368,7 +368,7 @@ export class TrzszFilter {
       sendFiles = directory ? await browser.selectSendDirectories() : await browser.selectSendFiles();
     } else {
       const filePaths = await this.chooseSendFiles(directory);
-      sendFiles = nodefs.checkPathsReadable(filePaths, directory);
+      sendFiles = await nodefs.checkPathsReadable(filePaths, directory);
     }
 
     if (!sendFiles || !sendFiles.length) {

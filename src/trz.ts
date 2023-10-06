@@ -108,7 +108,7 @@ async function main() {
 
   try {
     args.path = path.resolve(args.path);
-    nodefs.checkPathWritable(args.path);
+    await nodefs.checkPathWritable(args.path);
 
     const [tmuxMode, realStdoutWriter, tmuxPaneWidth] = await checkTmux();
 

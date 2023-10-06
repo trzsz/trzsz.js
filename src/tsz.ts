@@ -110,7 +110,7 @@ async function main() {
   const args = parseArgs();
 
   try {
-    const fileList = checkPathsReadable(args.file, args.directory);
+    const fileList = await checkPathsReadable(args.file, args.directory);
     if (!fileList) {
       return;
     }
