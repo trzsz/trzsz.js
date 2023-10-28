@@ -79,6 +79,7 @@ export class TrzszFilter {
   private chooseSaveDirectory?: () => Promise<string | undefined>;
   private terminalColumns: number;
   private isWindowsShell: boolean;
+  private dragInitTimeout: number;
   private trzszTransfer: TrzszTransfer | null = null;
   private textProgressBar: TextProgressBar | null = null;
   private uniqueIdMaps: Map<string, number> = new Map<string, number>();
@@ -107,10 +108,19 @@ export class TrzszFilter {
     }
     this.sendToServer = options.sendToServer;
 
+    if (!isRunningInBrowser && !options.chooseSendFiles) {
+      throw new TrzszError("TrzszOptions.chooseSendFiles is required when having a node runtime environment");
+    }
     this.chooseSendFiles = options.chooseSendFiles;
+
+    if (!isRunningInBrowser && !options.chooseSaveDirectory) {
+      throw new TrzszError("TrzszOptions.chooseSaveDirectory is required when having a node runtime environment");
+    }
     this.chooseSaveDirectory = options.chooseSaveDirectory;
+
     this.terminalColumns = options.terminalColumns || 80;
     this.isWindowsShell = !!options.isWindowsShell;
+    this.dragInitTimeout = options.dragInitTimeout || 3000;
   }
 
   /**
@@ -240,7 +250,7 @@ export class TrzszFilter {
           this.uploadFilesReject = null;
         }
       }
-    }, 1000);
+    }, this.dragInitTimeout);
 
     return new Promise((resolve, reject) => {
       this.uploadFilesResolve = resolve;

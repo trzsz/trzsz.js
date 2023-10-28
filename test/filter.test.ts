@@ -75,19 +75,25 @@ test("find trzsz magic key", async () => {
 
 test("default trzsz options for filter", () => {
   expect(() => new TrzszFilter(undefined)).toThrow("TrzszOptions is required");
-  expect(() => new TrzszFilter({})).toThrow("writeToTerminal is required");
-  expect(() => new TrzszFilter({ writeToTerminal: jest.fn() })).toThrow("sendToServer is required");
-
+  const options: TrzszOptions = {};
   const func = jest.fn();
-  const tf = new TrzszFilter({
-    writeToTerminal: func,
-    sendToServer: func,
-  });
-  expect((tf as any).writeToTerminal).toBe(func);
-  expect((tf as any).sendToServer).toBe(func);
-  expect((tf as any).chooseSendFiles).toBe(undefined);
-  expect((tf as any).chooseSaveDirectory).toBe(undefined);
-  expect((tf as any).terminalColumns).toBe(80);
+  expect(() => new TrzszFilter(options)).toThrow("writeToTerminal is required");
+  options.writeToTerminal = func;
+  expect(() => new TrzszFilter(options)).toThrow("sendToServer is required");
+  options.sendToServer = func;
+  expect(() => new TrzszFilter(options)).toThrow("chooseSendFiles is required");
+  options.chooseSendFiles = func;
+  expect(() => new TrzszFilter(options)).toThrow("chooseSaveDirectory is required");
+  options.chooseSaveDirectory = func;
+
+  const filter = new TrzszFilter(options);
+  expect(filter.writeToTerminal).toBe(func);
+  expect(filter.sendToServer).toBe(func);
+  expect(filter.chooseSendFiles).toBe(func);
+  expect(filter.chooseSaveDirectory).toBe(func);
+  expect(filter.terminalColumns).toBe(80);
+  expect(filter.isWindowsShell).toBe(false);
+  expect(filter.dragInitTimeout).toBe(3000);
 });
 
 test("custom trzsz options for filter", () => {
@@ -112,6 +118,7 @@ test("process the terminal binary input", async () => {
     sendToServer: jest.fn(),
     terminalColumns: 100,
   };
+  comm.isRunningInBrowser = true;
   const tf = new TrzszFilter(options);
   const uint8 = new Uint8Array(0x100);
   for (let i = 0; i < 0x100; i++) {
@@ -132,10 +139,12 @@ test("trz upload files", async () => {
   const writeToTerminal = jest.fn();
   const sendToServer = jest.fn();
   const chooseSendFiles = jest.fn();
+  const chooseSaveDirectory = jest.fn();
   const trzsz = new TrzszFilter({
     writeToTerminal: writeToTerminal,
     sendToServer: sendToServer,
     chooseSendFiles: chooseSendFiles,
+    chooseSaveDirectory: chooseSaveDirectory,
   });
 
   chooseSendFiles.mockReturnValueOnce([testPath]);
@@ -179,10 +188,12 @@ test("trz upload files", async () => {
 test("tsz download files", async () => {
   const writeToTerminal = jest.fn();
   const sendToServer = jest.fn();
+  const chooseSendFiles = jest.fn();
   const chooseSaveDirectory = jest.fn();
   const trzsz = new TrzszFilter({
     writeToTerminal: writeToTerminal,
     sendToServer: sendToServer,
+    chooseSendFiles: chooseSendFiles,
     chooseSaveDirectory: chooseSaveDirectory,
   });
 
@@ -194,7 +205,7 @@ test("tsz download files", async () => {
 
   await sleep(100);
   trzsz.processServerOutput(
-    "#CFG:eJyrVspJzEtXslJQKqhU0lFQSipNK86sSgUKGBqYWJiamwHFSjJzU/NLS8BiBiB+bmlFPFCgoLQkPqs0LxsoUVJUmloLAF6AF9g=\n"
+    "#CFG:eJyrVspJzEtXslJQKqhU0lFQSipNK86sSgUKGBqYWJiamwHFSjJzU/NLS8BiBiB+bmlFPFCgoLQkPqs0LxsoUVJUmloLAF6AF9g=\n",
   );
   trzsz.processServerOutput("#NUM:1\n");
   trzsz.processServerOutput("#NAME:eJwrSS0u0SupKAEADtkDTw==\n");
@@ -231,10 +242,12 @@ test("tsz download files", async () => {
 test("stop transferring files", async () => {
   const writeToTerminal = jest.fn();
   const sendToServer = jest.fn();
+  const chooseSendFiles = jest.fn();
   const chooseSaveDirectory = jest.fn();
   const trzsz = new TrzszFilter({
     writeToTerminal: writeToTerminal,
     sendToServer: sendToServer,
+    chooseSendFiles: chooseSendFiles,
     chooseSaveDirectory: chooseSaveDirectory,
   });
 
@@ -265,10 +278,12 @@ test("cancel upload files", async () => {
   const writeToTerminal = jest.fn();
   const sendToServer = jest.fn();
   const chooseSendFiles = jest.fn();
+  const chooseSaveDirectory = jest.fn();
   const trzsz = new TrzszFilter({
     writeToTerminal: writeToTerminal,
     sendToServer: sendToServer,
     chooseSendFiles: chooseSendFiles,
+    chooseSaveDirectory: chooseSaveDirectory,
   });
 
   chooseSendFiles.mockReturnValueOnce(undefined);
@@ -290,10 +305,12 @@ test("cancel upload files", async () => {
 test("cancel download files", async () => {
   const writeToTerminal = jest.fn();
   const sendToServer = jest.fn();
+  const chooseSendFiles = jest.fn();
   const chooseSaveDirectory = jest.fn();
   const trzsz = new TrzszFilter({
     writeToTerminal: writeToTerminal,
     sendToServer: sendToServer,
+    chooseSendFiles: chooseSendFiles,
     chooseSaveDirectory: chooseSaveDirectory,
   });
 
@@ -417,7 +434,7 @@ test("tsz download files in browser", async () => {
 
   await sleep(100);
   trzsz.processServerOutput(
-    "#CFG:eJyrVspJzEtXslJQKqhU0lFQSipNK86sSgUKGBqYWJiamwHFSjJzU/NLS8BiBiB+bmlFPFCgoLQkPqs0LxsoUVJUmloLAF6AF9g=\n"
+    "#CFG:eJyrVspJzEtXslJQKqhU0lFQSipNK86sSgUKGBqYWJiamwHFSjJzU/NLS8BiBiB+bmlFPFCgoLQkPqs0LxsoUVJUmloLAF6AF9g=\n",
   );
   trzsz.processServerOutput("#NUM:1\n");
   trzsz.processServerOutput("#NAME:eJwrSS0u0SupKAEADtkDTw==\n");

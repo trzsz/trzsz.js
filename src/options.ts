@@ -54,4 +54,10 @@ export interface TrzszOptions {
    * Is there a windows shell? Such as `cmd` and `PowerShell`.
    */
   isWindowsShell?: boolean;
+
+  /**
+   * The timeout in milliseconds for initializing drag and drop files to upload.
+   * Default is 3000.
+   */
+  dragInitTimeout?: number | undefined | null;
 }

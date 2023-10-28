@@ -34,10 +34,10 @@ export class TrzszAddon implements ITerminalAddon {
    * @param {Terminal} terminal - The xterm.js terminal
    */
   public activate(terminal: Terminal): void {
-    const writeToTerminal = (data) => {
+    const writeToTerminal = (data: string | ArrayBuffer) => {
       terminal.write(typeof data === "string" ? data : new Uint8Array(data));
     };
-    const sendToServer = (data) => {
+    const sendToServer = (data: string | Uint8Array) => {
       if (this.socket.readyState !== 1) {
         return;
       }
@@ -50,10 +50,11 @@ export class TrzszAddon implements ITerminalAddon {
       chooseSaveDirectory: this.options.chooseSaveDirectory,
       terminalColumns: terminal.cols,
       isWindowsShell: this.options.isWindowsShell,
+      dragInitTimeout: this.options.dragInitTimeout,
     });
 
     this.disposables.push(
-      this.addSocketListener(this.socket, "message", (ev) => this.trzsz.processServerOutput(ev.data))
+      this.addSocketListener(this.socket, "message", (ev) => this.trzsz.processServerOutput(ev.data)),
     );
     this.disposables.push(terminal.onData((data) => this.trzsz.processTerminalInput(data)));
     this.disposables.push(terminal.onBinary((data) => this.trzsz.processBinaryInput(data)));
@@ -94,7 +95,7 @@ export class TrzszAddon implements ITerminalAddon {
   protected addSocketListener<K extends keyof WebSocketEventMap>(
     socket: WebSocket,
     type: K,
-    handler: (this: WebSocket, ev: WebSocketEventMap[K]) => any
+    handler: (this: WebSocket, ev: WebSocketEventMap[K]) => any,
   ): IDisposable {
     socket.addEventListener(type, handler);
     return {
