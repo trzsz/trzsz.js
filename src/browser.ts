@@ -68,7 +68,7 @@ export async function parseFileSystemHandle(
   pathId: number,
   handle: FileSystemHandle,
   fileList: BrowserFileReader[],
-  relPath: string[]
+  relPath: string[],
 ) {
   if (handle.kind === "file") {
     const file = await (handle as FileSystemFileHandle).getFile();
@@ -87,13 +87,23 @@ export async function parseFileSystemHandle(
   }
 }
 
+function newFileSystemError(): TrzszError {
+  if (
+    window.location.protocol !== "https:" &&
+    !["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname)
+  ) {
+    return new TrzszError("The File System Access API requires HTTPS except localhost");
+  }
+  return new TrzszError("The browser doesn't support the File System Access API");
+}
+
 export async function selectSendFiles(): Promise<TrzszFileReader[] | undefined> {
   // @ts-ignore
   if (typeof window.showOpenFilePicker !== "function") {
-    throw new TrzszError("The browser doesn't support the File System Access API");
+    throw newFileSystemError();
   }
 
-  let fileHandleArray;
+  let fileHandleArray: FileSystemFileHandle[];
   try {
     // @ts-ignore
     fileHandleArray = await window.showOpenFilePicker({ id: "trzsz_upload", startIn: "documents", multiple: true });
@@ -119,10 +129,10 @@ export async function selectSendFiles(): Promise<TrzszFileReader[] | undefined> 
 export async function selectSendDirectories(): Promise<TrzszFileReader[] | undefined> {
   // @ts-ignore
   if (typeof window.showDirectoryPicker !== "function") {
-    throw new TrzszError("The browser doesn't support the File System Access API");
+    throw newFileSystemError();
   }
 
-  let dirHandle;
+  let dirHandle: FileSystemDirectoryHandle;
   try {
     // @ts-ignore
     dirHandle = await window.showDirectoryPicker({ id: "trzsz_upload", startIn: "documents" });
@@ -139,13 +149,13 @@ export async function selectSendDirectories(): Promise<TrzszFileReader[] | undef
 }
 
 class BrowserFileWriter implements TrzszFileWriter {
-  private writer; // FileSystemWritableFileStream
+  private writer: FileSystemWritableFileStream;
   private closed: boolean = false;
   private fileName: string;
   private localName: string;
   private dir: boolean;
 
-  constructor(fileName, localName: string, writer: any, dir: boolean = false) {
+  constructor(fileName: string, localName: string, writer: any, dir: boolean = false) {
     this.fileName = fileName;
     this.localName = localName;
     this.writer = writer;
@@ -170,7 +180,7 @@ class BrowserFileWriter implements TrzszFileWriter {
 
   public closeFile() {
     if (!this.closed) {
-      this.writer.close();
+      void this.writer.close();
       this.writer = null;
       this.closed = true;
     }
@@ -180,7 +190,7 @@ class BrowserFileWriter implements TrzszFileWriter {
 export async function selectSaveDirectory(): Promise<FileSystemDirectoryHandle | undefined> {
   // @ts-ignore
   if (typeof window.showDirectoryPicker !== "function") {
-    throw new TrzszError("The browser doesn't support the File System Access API");
+    throw newFileSystemError();
   }
 
   try {
