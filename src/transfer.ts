@@ -206,7 +206,7 @@ export class TrzszTransfer {
         setTimeout(() => {
           this.cleanTimeoutInMilliseconds = 3000;
           reject(new TrzszError("Receive data timeout"));
-        }, timeoutInMilliseconds)
+        }, timeoutInMilliseconds),
       ),
       (async () => {
         if (!binary) {
@@ -238,7 +238,7 @@ export class TrzszTransfer {
   }
 
   public async recvAction() {
-    const buf = await this.recvString("ACT");
+    const buf = await this.recvString("ACT", true);
     const action = JSON.parse(buf);
     if (action.newline) {
       this.protocolNewline = action.newline;
@@ -269,10 +269,12 @@ export class TrzszTransfer {
     }
     if (tmuxMode == TmuxMode.TmuxNormalMode) {
       config.tmux_output_junk = true;
+    }
+    if (tmuxPaneWidth > 0) {
       config.tmux_pane_width = tmuxPaneWidth;
     }
     let jsonStr = JSON.stringify(config);
-    jsonStr = jsonStr.replace(/[\u007F-\uFFFF]/g, function(chr) {
+    jsonStr = jsonStr.replace(/[\u007F-\uFFFF]/g, function (chr) {
       return "\\u" + ("0000" + chr.charCodeAt(0).toString(16)).slice(-4);
     });
     this.transferConfig = config;
@@ -390,7 +392,7 @@ export class TrzszTransfer {
     binary: boolean,
     escapeCodes: Array<number[]>,
     maxBufSize: number,
-    progressCallback: ProgressCallback
+    progressCallback: ProgressCallback,
   ) {
     let step = 0;
     if (progressCallback) {
@@ -480,7 +482,7 @@ export class TrzszTransfer {
     openSaveFile: OpenSaveFile,
     directory: boolean,
     overwrite: boolean,
-    progressCallback: ProgressCallback
+    progressCallback: ProgressCallback,
   ) {
     const fileName = await this.recvString("NAME");
     const file = await openSaveFile(saveParam, fileName, directory, overwrite);
@@ -506,7 +508,7 @@ export class TrzszTransfer {
     binary: boolean,
     escapeCodes: Array<number[]>,
     timeoutInMilliseconds: number,
-    progressCallback: ProgressCallback
+    progressCallback: ProgressCallback,
   ) {
     let step = 0;
     if (progressCallback) {

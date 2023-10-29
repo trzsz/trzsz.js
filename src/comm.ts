@@ -14,7 +14,7 @@ export const trzszVersion = "[VersionInject]{version}[/VersionInject]";
 
 /* eslint-disable require-jsdoc */
 
-export const isRunningInWindows = (function() {
+export const isRunningInWindows = (function () {
   try {
     return process.platform === "win32";
   } catch (err) {
@@ -22,13 +22,13 @@ export const isRunningInWindows = (function() {
   }
 })();
 
-export const isRunningInBrowser = (function() {
+export const isRunningInBrowser = (function () {
   try {
     if (require.resolve("fs") === "fs") {
       require("fs");
       return false;
     }
-  } catch (err) { }
+  } catch (err) {}
   return true;
 })();
 
@@ -247,8 +247,10 @@ export async function checkTmux() {
 
   const fs = require("fs");
   const [tmuxTty, controlMode, paneWidth] = tokens;
+  const tmuxPaneWidth = parseInt(paneWidth, 10);
+
   if (controlMode == "1" || !tmuxTty.startsWith("/") || !fs.existsSync(tmuxTty)) {
-    return [TmuxMode.TmuxControlMode, stdoutWriter, -1];
+    return [TmuxMode.TmuxControlMode, stdoutWriter, tmuxPaneWidth];
   }
 
   const fd = fs.openSync(tmuxTty, "w");
@@ -256,11 +258,11 @@ export async function checkTmux() {
 
   const statusInterval = await getTmuxStatusInterval();
   await setTmuxStatusInterval("0");
-  process.on("exit", async function() {
+  process.on("exit", async function () {
     await setTmuxStatusInterval(statusInterval);
   });
 
-  return [TmuxMode.TmuxNormalMode, tmuxRealWriter, parseInt(paneWidth, 10)];
+  return [TmuxMode.TmuxNormalMode, tmuxRealWriter, tmuxPaneWidth];
 }
 
 async function getTmuxStatusInterval() {
