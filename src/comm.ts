@@ -55,12 +55,24 @@ export function strToArrBuf(str: string): ArrayBuffer {
   return strToUint8(str).buffer;
 }
 
+const _hasBuffer = typeof Buffer === "function";
+
 export function encodeBuffer(buf: string | Uint8Array): string {
-  return Base64.fromByteArray(Pako.deflate(buf));
+  const buffer = Pako.deflate(buf);
+  if (_hasBuffer) {
+    return Buffer.from(buffer).toString("base64");
+  }
+  return Base64.fromByteArray(buffer);
 }
 
 export function decodeBuffer(buf: string): Uint8Array {
-  return Pako.inflate(Base64.toByteArray(buf));
+  let buffer: Uint8Array;
+  if (_hasBuffer) {
+    buffer = Buffer.from(buf, "base64");
+  } else {
+    buffer = Base64.toByteArray(buf);
+  }
+  return Pako.inflate(buffer);
 }
 
 export class TrzszError extends Error {
