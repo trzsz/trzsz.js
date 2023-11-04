@@ -21,6 +21,7 @@ import {
   TrzszFileWriter,
   ProgressCallback,
   stripTmuxStatusLine,
+  tmuxRefreshClient,
 } from "./comm";
 
 /* eslint-disable require-jsdoc */
@@ -32,6 +33,7 @@ export class TrzszTransfer {
   private remoteIsWindows: boolean = false;
   private lastInputTime: number = 0;
   private openedFiles: TrzszFile[] = [];
+  private createdFiles: TrzszFileWriter[] = [];
   private tmuxOutputJunk: boolean = false;
   private cleanTimeoutInMilliseconds: number = 100;
   private transferConfig: any = {};
@@ -161,7 +163,7 @@ export class TrzszTransfer {
     return uint8ToStr(decodeBuffer(buf), "utf8");
   }
 
-  private async checkString(expect: string) {
+  protected async checkString(expect: string) {
     const result = await this.recvString("SUCC");
     if (result !== expect) {
       throw new TrzszError(`String check [${result}] <> [${expect}]`, null, true);
@@ -307,6 +309,20 @@ export class TrzszTransfer {
     }
     process.stdout.write(msg);
     process.stdout.write("\r\n");
+    if (this.transferConfig.tmux_output_junk) {
+      await tmuxRefreshClient();
+    }
+  }
+
+  private async deleteCreatedFiles() {
+    const deletedFiles: string[] = [];
+    for (const file of this.createdFiles) {
+      const path = await file.deleteFile();
+      if (path) {
+        deletedFiles.push(path);
+      }
+    }
+    return deletedFiles;
   }
 
   public async clientError(err: Error) {
@@ -339,6 +355,13 @@ export class TrzszTransfer {
     const errMsg = TrzszError.getErrorMessage(err);
     let trace = true;
     if (err instanceof TrzszError) {
+      if (err.isStopAndDelete()) {
+        const deletedFiles = await this.deleteCreatedFiles();
+        if (deletedFiles && deletedFiles.length) {
+          await this.serverExit([err.message + ":"].concat(deletedFiles).join("\r\n- "));
+          return;
+        }
+      }
       trace = err.isTraceBack();
       if (err.isRemoteExit() || err.isRemoteFail()) {
         await this.serverExit(errMsg);
@@ -486,6 +509,7 @@ export class TrzszTransfer {
   ) {
     const fileName = await this.recvString("NAME");
     const file = await openSaveFile(saveParam, fileName, directory, overwrite);
+    this.createdFiles.push(file);
     await this.sendString("SUCC", file.getLocalName());
     if (progressCallback) {
       progressCallback.onName(file.getFileName());

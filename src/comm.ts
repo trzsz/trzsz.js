@@ -104,6 +104,13 @@ export class TrzszError extends Error {
     return this.type === "fail" || this.type === "FAIL";
   }
 
+  public isStopAndDelete() {
+    if (this.type !== "fail") {
+      return false;
+    }
+    return this.message === "Stopped and deleted";
+  }
+
   public static getErrorMessage(err: Error) {
     if (err instanceof TrzszError && !err.isTraceBack()) {
       return err.message;
@@ -132,6 +139,7 @@ export interface TrzszFileWriter extends TrzszFile {
   getLocalName: () => string;
   isDir: () => boolean;
   writeFile: (buf: Uint8Array) => Promise<void>;
+  deleteFile: () => Promise<string>;
 }
 
 export type OpenSaveFile = (
@@ -281,6 +289,11 @@ async function setTmuxStatusInterval(interval: string) {
   }
   const exec = require("util").promisify(require("child_process").exec);
   await exec(`tmux setw status-interval ${interval}`);
+}
+
+export async function tmuxRefreshClient() {
+  const exec = require("util").promisify(require("child_process").exec);
+  await exec("tmux refresh-client");
 }
 
 export function getTerminalColumns() {

@@ -185,6 +185,10 @@ class BrowserFileWriter implements TrzszFileWriter {
       this.closed = true;
     }
   }
+
+  public async deleteFile() {
+    return "";
+  }
 }
 
 export async function selectSaveDirectory(): Promise<FileSystemDirectoryHandle | undefined> {
