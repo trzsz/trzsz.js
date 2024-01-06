@@ -44,8 +44,8 @@ export class TrzszAddon implements ITerminalAddon {
       this.socket.send(data);
     };
     this.trzsz = new TrzszFilter({
-      writeToTerminal: writeToTerminal,
-      sendToServer: sendToServer,
+      writeToTerminal: this.options.writeToTerminal || writeToTerminal,
+      sendToServer: this.options.sendToServer || sendToServer,
       chooseSendFiles: this.options.chooseSendFiles,
       chooseSaveDirectory: this.options.chooseSaveDirectory,
       terminalColumns: terminal.cols,
