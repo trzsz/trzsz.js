@@ -13,8 +13,8 @@
   "author": "Lonny Wong",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^27.0.3",
-    "electron-builder": "^24.6.4"
+    "electron": "^28.1.1",
+    "electron-builder": "^24.9.1"
   },
   "dependencies": {
     "node-pty": "^1.0.0",
