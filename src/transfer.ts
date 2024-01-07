@@ -309,6 +309,7 @@ export class TrzszTransfer {
     }
     process.stdout.write(msg);
     process.stdout.write("\r\n");
+    process.stdout.write("\x1b[?25h");
     if (this.transferConfig.tmux_output_junk) {
       await tmuxRefreshClient();
     }

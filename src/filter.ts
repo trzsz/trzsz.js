@@ -328,9 +328,21 @@ export class TrzszFilter {
       this.uploadFilesResolve = null;
       this.uploadFilesReject = null;
       this.trzszTransfer.cleanup();
+      if (this.textProgressBar) {
+        this.textProgressBar.showCursor();
+      }
       this.textProgressBar = null;
       this.trzszTransfer = null;
     }
+  }
+
+  private createProgressBar(quiet?: boolean, tmuxPaneColumns?: number) {
+    if (quiet === true) {
+      this.textProgressBar = null;
+      return;
+    }
+    this.textProgressBar = new TextProgressBar(this.writeToTerminal, this.terminalColumns, tmuxPaneColumns);
+    this.textProgressBar.hideCursor();
   }
 
   private async handleTrzszDownloadFiles(_version: string, remoteIsWindows: boolean) {
@@ -360,9 +372,7 @@ export class TrzszFilter {
     await this.trzszTransfer.sendAction(true, remoteIsWindows);
     const config = await this.trzszTransfer.recvConfig();
 
-    if (config.quiet !== true) {
-      this.textProgressBar = new TextProgressBar(this.writeToTerminal, this.terminalColumns, config.tmux_pane_width);
-    }
+    this.createProgressBar(config.quiet, config.tmux_pane_width);
 
     const localNames = await this.trzszTransfer.recvFiles(saveParam, openSaveFile, this.textProgressBar);
 
@@ -393,9 +403,7 @@ export class TrzszFilter {
       checkDuplicateNames(sendFiles);
     }
 
-    if (config.quiet !== true) {
-      this.textProgressBar = new TextProgressBar(this.writeToTerminal, this.terminalColumns, config.tmux_pane_width);
-    }
+    this.createProgressBar(config.quiet, config.tmux_pane_width);
 
     const remoteNames = await this.trzszTransfer.sendFiles(sendFiles, this.textProgressBar);
 

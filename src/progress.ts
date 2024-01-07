@@ -109,7 +109,7 @@ export class TextProgressBar implements ProgressCallback {
   public constructor(
     writer: (output: string) => void,
     columns: number,
-    tmuxPaneColumns: number | undefined = undefined
+    tmuxPaneColumns: number | undefined = undefined,
   ) {
     this.writer = writer;
     this.tmuxPaneColumns = tmuxPaneColumns || 0;
@@ -151,6 +151,14 @@ export class TextProgressBar implements ProgressCallback {
     }
     this.fileStep = step;
     this.showProgress();
+  }
+
+  public hideCursor() {
+    this.writer("\x1b[?25l");
+  }
+
+  public showCursor() {
+    this.writer("\x1b[?25h");
   }
 
   private showProgress() {
