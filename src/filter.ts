@@ -211,7 +211,7 @@ export class TrzszFilter {
     if (this.uploadFilesList || this.isTransferringFiles()) {
       throw new Error("The previous upload has not been completed yet");
     }
-    if (!isRunningInBrowser && Array.isArray(items) && isArrayOfType(items, "string")) {
+    if (!isRunningInBrowser && isArrayOfType(items, "string")) {
       this.uploadFilesList = await nodefs.checkPathsReadable(items as string[], true);
     } else if (typeof DataTransferItemList !== "undefined" && items instanceof DataTransferItemList) {
       this.uploadFilesList = await parseDataTransferItemList(items as DataTransferItemList);
