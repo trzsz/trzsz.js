@@ -211,10 +211,10 @@ export class TrzszFilter {
     if (this.uploadFilesList || this.isTransferringFiles()) {
       throw new Error("The previous upload has not been completed yet");
     }
-    if (items instanceof DataTransferItemList) {
-      this.uploadFilesList = await parseDataTransferItemList(items as DataTransferItemList);
-    } else if (isArrayOfType(items, "string") && !isRunningInBrowser) {
+    if (!isRunningInBrowser && isArrayOfType(items, "string")) {
       this.uploadFilesList = await nodefs.checkPathsReadable(items as string[], true);
+    } else if (typeof DataTransferItemList !== "undefined" && items instanceof DataTransferItemList) {
+      this.uploadFilesList = await parseDataTransferItemList(items as DataTransferItemList);
     } else {
       throw new Error("The upload items type is not supported");
     }
