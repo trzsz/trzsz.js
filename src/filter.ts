@@ -213,7 +213,7 @@ export class TrzszFilter {
     }
     if (!isRunningInBrowser && Array.isArray(items) && isArrayOfType(items, "string")) {
       this.uploadFilesList = await nodefs.checkPathsReadable(items as string[], true);
-    } else if (isRunningInBrowser && items instanceof DataTransferItemList) {
+    } else if (typeof DataTransferItemList !== "undefined" && items instanceof DataTransferItemList) {
       this.uploadFilesList = await parseDataTransferItemList(items as DataTransferItemList);
   	} else {
       throw new Error("The upload items type is not supported");
