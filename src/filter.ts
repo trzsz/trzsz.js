@@ -215,9 +215,9 @@ export class TrzszFilter {
       this.uploadFilesList = await nodefs.checkPathsReadable(items as string[], true);
     } else if (typeof DataTransferItemList !== "undefined" && items instanceof DataTransferItemList) {
       this.uploadFilesList = await parseDataTransferItemList(items as DataTransferItemList);
-  	} else {
+    } else {
       throw new Error("The upload items type is not supported");
-  	}
+    }
 
     if (!this.uploadFilesList || !this.uploadFilesList.length) {
       this.uploadFilesList = null;
