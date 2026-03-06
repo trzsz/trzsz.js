@@ -50,6 +50,7 @@ export class TrzszAddon implements ITerminalAddon {
       chooseSaveDirectory: this.options.chooseSaveDirectory,
       terminalColumns: terminal.cols,
       isWindowsShell: this.options.isWindowsShell,
+      maxDataChunkSize: this.options.maxDataChunkSize,
       dragInitTimeout: this.options.dragInitTimeout,
     });
 

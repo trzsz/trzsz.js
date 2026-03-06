@@ -27,6 +27,7 @@ import {
 /* eslint-disable require-jsdoc */
 
 export class TrzszTransfer {
+  private static readonly MAX_DATA_CHUNK_SIZE = 10 * 1024 * 1024;
   private buffer: TrzszBuffer = new TrzszBuffer();
   private writer: (data: string | Uint8Array) => void;
   private isWindowsShell: boolean;
@@ -40,10 +41,16 @@ export class TrzszTransfer {
   private stopped: boolean = false;
   private maxChunkTimeInMilliseconds: number = 0;
   private protocolNewline: string = "\n";
+  private maxDataChunkSize: number;
 
-  public constructor(writer: (data: string | Uint8Array) => void, isWindowsShell: boolean = false) {
+  public constructor(
+    writer: (data: string | Uint8Array) => void,
+    isWindowsShell: boolean = false,
+    maxDataChunkSize: number = TrzszTransfer.MAX_DATA_CHUNK_SIZE,
+  ) {
     this.writer = writer;
     this.isWindowsShell = isWindowsShell;
+    this.maxDataChunkSize = maxDataChunkSize;
   }
 
   public cleanup() {
@@ -463,7 +470,9 @@ export class TrzszTransfer {
 
     const binary = this.transferConfig.binary === true;
     const directory = this.transferConfig.directory === true;
-    const maxBufSize = this.transferConfig.bufsize || 10 * 1024 * 1024;
+    const maxBufSize = this.transferConfig.bufsize
+      ? Math.min(this.transferConfig.bufsize, this.maxDataChunkSize)
+      : this.maxDataChunkSize;
     const escapeCodes = this.transferConfig.escape_chars ? escapeCharsToCodes(this.transferConfig.escape_chars) : [];
 
     await this.sendFileNum(files.length, progressCallback);

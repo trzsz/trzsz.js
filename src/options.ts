@@ -56,6 +56,12 @@ export interface TrzszOptions {
   isWindowsShell?: boolean;
 
   /**
+   * The maximum local upload data chunk size.
+   * Default is 10MB.
+   */
+  maxDataChunkSize?: number;
+
+  /**
    * The timeout in milliseconds for initializing drag and drop files to upload.
    * Default is 3000.
    */

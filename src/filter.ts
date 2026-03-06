@@ -80,6 +80,7 @@ export class TrzszFilter {
   private terminalColumns: number;
   private isWindowsShell: boolean;
   private dragInitTimeout: number;
+  private maxDataChunkSize?: number;
   private trzszTransfer: TrzszTransfer | null = null;
   private textProgressBar: TextProgressBar | null = null;
   private uniqueIdMaps: Map<string, number> = new Map<string, number>();
@@ -120,6 +121,7 @@ export class TrzszFilter {
 
     this.terminalColumns = options.terminalColumns || 80;
     this.isWindowsShell = !!options.isWindowsShell;
+    this.maxDataChunkSize = options.maxDataChunkSize;
     this.dragInitTimeout = options.dragInitTimeout || 3000;
   }
 
@@ -308,7 +310,7 @@ export class TrzszFilter {
     }
 
     try {
-      this.trzszTransfer = new TrzszTransfer(this.sendToServer, this.isWindowsShell);
+      this.trzszTransfer = new TrzszTransfer(this.sendToServer, this.isWindowsShell, this.maxDataChunkSize);
       if (mode === "S") {
         await this.handleTrzszDownloadFiles(version, remoteIsWindows);
       } else if (mode === "R") {
