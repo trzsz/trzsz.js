@@ -368,7 +368,7 @@ test("download files md5 invalid", async () => {
   trzsz.addReceivedData("#DATA:eJwrSS0uUUjOzytJzSvhAgAkDwTm\n");
   trzsz.addReceivedData("#MD5:eJwzNDI2MTUzt7AEAAkeAd4=\n");
 
-  await expect(trzsz.recvFiles("/tmp", openSaveFile, null)).rejects.toThrowError("MD5");
+  await expect(trzsz.recvFiles("/tmp", openSaveFile, null)).rejects.toThrow("MD5");
 });
 
 test("download files md5 not match", async () => {
@@ -391,7 +391,7 @@ test("download files md5 not match", async () => {
   trzsz.addReceivedData("#DATA:eJwrSS0uUUjOzytJzSvhAgAkDwTm\n");
   trzsz.addReceivedData("#MD5:eJyLbvvVdeOLad0ScUXHJvHqFwBJWwf+\n");
 
-  await expect(trzsz.recvFiles("/tmp", openSaveFile, null)).rejects.toThrowError("MD5");
+  await expect(trzsz.recvFiles("/tmp", openSaveFile, null)).rejects.toThrow("MD5");
 });
 
 test("download files timeout", async () => {
@@ -417,7 +417,7 @@ test("download files timeout", async () => {
   trzsz.addReceivedData("#NAME:eJwrSS0u0SupKAEADtkDTw==\n");
   trzsz.addReceivedData("#SIZE:13\n");
 
-  await expect(trzsz.recvFiles("/tmp", openSaveFile, null)).rejects.toThrowError("Receive data timeout");
+  await expect(trzsz.recvFiles("/tmp", openSaveFile, null)).rejects.toThrow("Receive data timeout");
 
   trzsz.cleanup();
   expect(file.closeFile.mock.calls.length).toBe(1);
@@ -598,31 +598,31 @@ test("receive invalid data", async () => {
   const trzsz: any = new TrzszTransfer(writer);
 
   trzsz.addReceivedData("data\n");
-  await expect(trzsz.recvCheck("DATA")).rejects.toThrowError("colon: eJxLSSxJBAAEAAGb");
+  await expect(trzsz.recvCheck("DATA")).rejects.toThrow("colon: eJxLSSxJBAAEAAGb");
 
   trzsz.addReceivedData(":data\n");
-  await expect(trzsz.recvCheck("DATA")).rejects.toThrowError("colon: eJyzSkksSQQABSMB1Q==");
+  await expect(trzsz.recvCheck("DATA")).rejects.toThrow("colon: eJyzSkksSQQABSMB1Q==");
 
   trzsz.addReceivedData("T:data\n");
-  await expect(trzsz.recvCheck("T")).rejects.toThrowError("data");
+  await expect(trzsz.recvCheck("T")).rejects.toThrow("data");
 
   trzsz.addReceivedData("#T:data\n");
-  await expect(trzsz.recvCheck("E")).rejects.toThrowError("data");
+  await expect(trzsz.recvCheck("E")).rejects.toThrow("data");
 
   trzsz.addReceivedData("#T:data\n");
   await expect(trzsz.recvCheck("T")).resolves.toBe("data");
 
   trzsz.addReceivedData("#SUCC:10\n");
-  await expect(trzsz.checkInteger(11)).rejects.toThrowError("[10] <> [11]");
+  await expect(trzsz.checkInteger(11)).rejects.toThrow("[10] <> [11]");
 
   trzsz.addReceivedData("#SUCC:eJxLBAAAYgBi\n");
-  await expect(trzsz.checkString("b")).rejects.toThrowError("[a] <> [b]");
+  await expect(trzsz.checkString("b")).rejects.toThrow("[a] <> [b]");
 
   trzsz.addReceivedData("#SUCC:eJxLBAAAYgBi\n");
-  await expect(trzsz.checkBinary(strToUint8("ab"))).rejects.toThrowError("[1] <> [2]");
+  await expect(trzsz.checkBinary(strToUint8("ab"))).rejects.toThrow("[1] <> [2]");
 
   trzsz.addReceivedData("#SUCC:eJxLBAAAYgBi\n");
-  await expect(trzsz.checkBinary(strToUint8("b"))).rejects.toThrowError("[97] <> [98]");
+  await expect(trzsz.checkBinary(strToUint8("b"))).rejects.toThrow("[97] <> [98]");
 });
 
 test("stop transferring and close files", async () => {
@@ -633,7 +633,7 @@ test("stop transferring and close files", async () => {
   trzsz.addReceivedData("trz\n");
 
   await trzsz.stopTransferring();
-  await expect((trzsz as any).recvLine()).rejects.toThrowError("Stopped");
+  await expect((trzsz as any).recvLine()).rejects.toThrow("Stopped");
 
   const file = {
     closeFile: jest.fn(),
@@ -643,7 +643,7 @@ test("stop transferring and close files", async () => {
     getSize: () => 1,
     readFile: jest.fn(),
   };
-  await expect(trzsz.sendFiles([file, file, file], null)).rejects.toThrowError("Stopped");
+  await expect(trzsz.sendFiles([file, file, file], null)).rejects.toThrow("Stopped");
 
   await trzsz.clientError(new TrzszError("Stopped"));
   expect(Date.now() - now).toBeGreaterThanOrEqual(500);

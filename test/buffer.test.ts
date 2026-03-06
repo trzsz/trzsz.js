@@ -64,10 +64,10 @@ test("read line from blob", async () => {
 test("read line interrupted", async () => {
   const tb = new TrzszBuffer();
   tb.addBuffer("test\x03message\n");
-  await expect(tb.readLine()).rejects.toThrowError("Interrupted");
+  await expect(tb.readLine()).rejects.toThrow("Interrupted");
   tb.addBuffer("test\nmessage\x03\n");
   expect(await tb.readLine()).toBe("test");
-  await expect(tb.readLine()).rejects.toThrowError("Interrupted");
+  await expect(tb.readLine()).rejects.toThrow("Interrupted");
 });
 
 test("read binary after add buffer", async () => {
@@ -108,13 +108,13 @@ test("read binary from two buffer", async () => {
 test("not support buffer type", async () => {
   const tb = new TrzszBuffer();
   tb.addBuffer(123 as any);
-  await expect(tb.readLine()).rejects.toThrowError("not supported");
+  await expect(tb.readLine()).rejects.toThrow("not supported");
 });
 
 test("stop while reading", async () => {
   const tb = new TrzszBuffer();
   setTimeout(() => tb.stopBuffer(), 100);
-  await expect(tb.readLine()).rejects.toThrowError("Stopped");
+  await expect(tb.readLine()).rejects.toThrow("Stopped");
 });
 
 test("drain buffer", async () => {
@@ -150,5 +150,5 @@ test("read line on windows", async () => {
   tb.addBuffer("BFjn6\x1b[30;1H\x1b[?25l\n\x1b[29;120H6jEF8aG!");
   expect(await tb.readLineOnWindows()).toBe("BFjn6jEF8aG");
   tb.addBuffer("test\x03message");
-  await expect(tb.readLineOnWindows()).rejects.toThrowError("Interrupted");
+  await expect(tb.readLineOnWindows()).rejects.toThrow("Interrupted");
 });

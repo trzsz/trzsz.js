@@ -15,9 +15,9 @@
     "xterm-addon-fit": "^0.8.0"
   },
   "devDependencies": {
-    "express": "^4.18.2",
+    "express": "^5.2.1",
     "express-ws": "^5.0.2",
-    "nan": "^2.18.0",
-    "node-pty": "^1.0.0"
+    "nan": "^2.25.0",
+    "node-pty": "^1.1.0"
   }
 }

@@ -59,18 +59,18 @@ test("check paths readable", async () => {
   expect(((await checkPathsReadable([tmpFile])) as TrzszFileReader[]).length).toBe(1);
   expect(((await checkPathsReadable([linkPath])) as TrzszFileReader[]).length).toBe(1);
 
-  await expect(checkPathsReadable([notExistFile])).rejects.toThrowError("No such file");
-  await expect(checkPathsReadable([tmpFile, notExistFile])).rejects.toThrowError("No such file");
+  await expect(checkPathsReadable([notExistFile])).rejects.toThrow("No such file");
+  await expect(checkPathsReadable([tmpFile, notExistFile])).rejects.toThrow("No such file");
 
-  await expect(checkPathsReadable([tmpDir])).rejects.toThrowError("Is a directory");
-  await expect(checkPathsReadable([tmpFile, tmpDir])).rejects.toThrowError("Is a directory");
+  await expect(checkPathsReadable([tmpDir])).rejects.toThrow("Is a directory");
+  await expect(checkPathsReadable([tmpFile, tmpDir])).rejects.toThrow("Is a directory");
 
   if (process.platform !== "win32" && require("os").userInfo().uid != 0) {
-    await expect(checkPathsReadable(["/dev/stdin"])).rejects.toThrowError("Not a regular file");
-    await expect(checkPathsReadable([tmpFile, "/dev/stdin"])).rejects.toThrowError("Not a regular file");
+    await expect(checkPathsReadable(["/dev/stdin"])).rejects.toThrow("Not a regular file");
+    await expect(checkPathsReadable([tmpFile, "/dev/stdin"])).rejects.toThrow("Not a regular file");
 
     fs.chmodSync(tmpFile, 0o222);
-    await expect(checkPathsReadable([tmpFile])).rejects.toThrowError("No permission to read");
+    await expect(checkPathsReadable([tmpFile])).rejects.toThrow("No permission to read");
     fs.chmodSync(tmpFile, 0o444);
   }
 });
@@ -82,12 +82,12 @@ test("check path writable", async () => {
   fs.chmodSync(tmpDir, 0o777);
   expect(await checkPathWritable(tmpDir)).toBe(true);
 
-  await expect(checkPathWritable(notExistFile)).rejects.toThrowError("No such directory");
-  await expect(checkPathWritable(tmpFile)).rejects.toThrowError("Not a directory");
+  await expect(checkPathWritable(notExistFile)).rejects.toThrow("No such directory");
+  await expect(checkPathWritable(tmpFile)).rejects.toThrow("Not a directory");
 
   if (process.platform !== "win32" && require("os").userInfo().uid != 0) {
     fs.chmodSync(tmpDir, 0o444);
-    await expect(checkPathWritable(tmpDir)).rejects.toThrowError("No permission to write");
+    await expect(checkPathWritable(tmpDir)).rejects.toThrow("No permission to write");
     fs.chmodSync(tmpDir, 0o777);
   }
 });
@@ -114,12 +114,12 @@ test("open send files success", async () => {
   expect(await tfr.readFile(buf)).toStrictEqual(strToUint8(""));
 
   tfr.closeFile();
-  await expect(tfr.readFile(buf)).rejects.toThrowError("File closed");
+  await expect(tfr.readFile(buf)).rejects.toThrow("File closed");
 });
 
 test("open send files error", async () => {
-  await expect(checkPathsReadable([notExistFile])).rejects.toThrowError("No such file");
-  await expect(checkPathsReadable([tmpFile, notExistFile])).rejects.toThrowError("No such file");
+  await expect(checkPathsReadable([notExistFile])).rejects.toThrow("No such file");
+  await expect(checkPathsReadable([tmpFile, notExistFile])).rejects.toThrow("No such file");
 });
 
 test("open save file success", async () => {
@@ -147,7 +147,7 @@ test("open save file success", async () => {
 
   const access = fs.access;
   fs.access = (_path: string, mode: Function, callback: Function) => (callback ? callback(null) : mode(null));
-  await expect(openSaveFile(saveParam, "save.txt", false, false)).rejects.toThrowError("Fail to assign new file name");
+  await expect(openSaveFile(saveParam, "save.txt", false, false)).rejects.toThrow("Fail to assign new file name");
   fs.access = access;
 });
 
@@ -155,16 +155,16 @@ test("open save file error", async () => {
   const saveParam = { path: tmpDir, maps: new Map<string, string>() };
   if (process.platform !== "win32" && require("os").userInfo().uid != 0) {
     fs.chmodSync(tmpDir, 0o444);
-    await expect(openSaveFile(saveParam, "error.txt", false, false)).rejects.toThrowError("No permission to write");
+    await expect(openSaveFile(saveParam, "error.txt", false, false)).rejects.toThrow("No permission to write");
     fs.chmodSync(tmpDir, 0o777);
   }
 
   fs.mkdirSync(path.join(tmpDir, "isdir"));
-  await expect(openSaveFile(saveParam, "isdir", false, true)).rejects.toThrowError("Is a directory");
+  await expect(openSaveFile(saveParam, "isdir", false, true)).rejects.toThrow("Is a directory");
 
   const open = fs.open;
   fs.open = (_path: string, _flags: string, callback: Function) => callback(new Error("other error"));
-  await expect(openSaveFile(saveParam, "other.txt", false, false)).rejects.toThrowError("other error");
+  await expect(openSaveFile(saveParam, "other.txt", false, false)).rejects.toThrow("other error");
   fs.open = open;
 });
 
@@ -196,7 +196,7 @@ test("open directory success", async () => {
   expect(await fileList[1].readFile(buf)).toStrictEqual(strToUint8(""));
 
   fileList[1].closeFile();
-  await expect(fileList[1].readFile(buf)).rejects.toThrowError("File closed");
+  await expect(fileList[1].readFile(buf)).rejects.toThrow("File closed");
 });
 
 test("open directory error", async () => {
@@ -205,7 +205,7 @@ test("open directory error", async () => {
   if (process.platform !== "win32") {
     const linkDir = path.join(testDir, "link");
     fs.symlinkSync(testDir, linkDir);
-    await expect(checkPathsReadable([testDir], true)).rejects.toThrowError("Duplicate link");
+    await expect(checkPathsReadable([testDir], true)).rejects.toThrow("Duplicate link");
   }
 });
 
@@ -279,12 +279,12 @@ test("save directory error", async () => {
     is_dir: true as boolean | undefined,
   };
   const saveParam = { path: testDir, maps: new Map<string, string>() };
-  await expect(openSaveFile(saveParam, JSON.stringify(fileName), true, true)).rejects.toThrowError("Not a directory");
+  await expect(openSaveFile(saveParam, JSON.stringify(fileName), true, true)).rejects.toThrow("Not a directory");
 
   fileName.path_name = [];
-  await expect(openSaveFile(saveParam, JSON.stringify(fileName), true, true)).rejects.toThrowError("Invalid name");
+  await expect(openSaveFile(saveParam, JSON.stringify(fileName), true, true)).rejects.toThrow("Invalid name");
 
   delete fileName.is_dir;
   fileName.path_name = ["b"];
-  await expect(openSaveFile(saveParam, JSON.stringify(fileName), true, true)).rejects.toThrowError("Invalid name");
+  await expect(openSaveFile(saveParam, JSON.stringify(fileName), true, true)).rejects.toThrow("Invalid name");
 });

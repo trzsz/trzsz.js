@@ -174,7 +174,7 @@ class BrowserFileWriter implements TrzszFileWriter {
     return this.dir;
   }
 
-  public async writeFile(buf: Uint8Array) {
+  public async writeFile(buf: Uint8Array<ArrayBuffer>) {
     await this.writer.write(buf);
   }
 

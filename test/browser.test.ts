@@ -28,10 +28,10 @@ afterAll(() => {
 
 test("browser doesn't support", async () => {
   delete window.showOpenFilePicker;
-  await expect(selectSendFiles()).rejects.toThrowError("File System Access API");
+  await expect(selectSendFiles()).rejects.toThrow("File System Access API");
   delete window.showDirectoryPicker;
-  await expect(selectSendDirectories()).rejects.toThrowError("File System Access API");
-  await expect(selectSaveDirectory()).rejects.toThrowError("File System Access API");
+  await expect(selectSendDirectories()).rejects.toThrow("File System Access API");
+  await expect(selectSaveDirectory()).rejects.toThrow("File System Access API");
 });
 
 test("showOpenFilePicker return null", async () => {
@@ -49,7 +49,7 @@ test("showOpenFilePicker user cancel", async () => {
   window.showOpenFilePicker.mockRejectedValue(abortError);
   expect(await selectSendFiles()).toBe(undefined);
   window.showOpenFilePicker.mockRejectedValue(new Error("other error"));
-  await expect(selectSendFiles()).rejects.toThrowError("other error");
+  await expect(selectSendFiles()).rejects.toThrow("other error");
   expect(window.showOpenFilePicker.mock.calls.length).toBe(2);
 });
 
@@ -94,7 +94,7 @@ test("showOpenFilePicker and no permission", async () => {
   });
 
   const buf = new ArrayBuffer(17);
-  await expect(tfr.readFile(buf)).rejects.toThrowError("error");
+  await expect(tfr.readFile(buf)).rejects.toThrow("error");
 
   fileMock.mockRestore();
   tfr.closeFile();

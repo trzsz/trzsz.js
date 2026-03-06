@@ -43,16 +43,17 @@ export async function uint8ToStr(buf: Uint8Array, encoding: BufferEncoding = "bi
   return new Promise<string>((resolve) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve(reader.result as string);
+    const view = buf as Uint8Array<ArrayBuffer>;
     if (encoding == "binary") {
-      reader.readAsBinaryString(new Blob([buf]));
+      reader.readAsBinaryString(new Blob([view]));
     } else {
-      reader.readAsText(new Blob([buf]), encoding);
+      reader.readAsText(new Blob([view]), encoding);
     }
   });
 }
 
 export function strToArrBuf(str: string): ArrayBuffer {
-  return strToUint8(str).buffer;
+  return strToUint8(str).buffer as ArrayBuffer;
 }
 
 const _hasBuffer = typeof Buffer === "function";

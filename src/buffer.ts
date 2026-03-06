@@ -106,7 +106,7 @@ export class TrzszBuffer {
     return buf;
   }
 
-  private appendBuffer(dst: Uint8Array, idx: number, src: Uint8Array) {
+  private appendBuffer(dst: Uint8Array<ArrayBuffer>, idx: number, src: Uint8Array) {
     const buf = dst.length >= idx + src.length ? dst : this.growBuffer(dst, idx, src.length);
     buf.set(src, idx);
     return buf;
