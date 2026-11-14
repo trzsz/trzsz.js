@@ -181,7 +181,8 @@ export class TextProgressBar implements ProgressCallback {
       etaStr = convertTimeToString(Math.round((this.fileSize - this.fileStep) / speed)) + " ETA";
     }
 
-    const progressText = this.getProgressText(percentage, total, speedStr, etaStr);
+    let progressText = this.getProgressText(percentage, total, speedStr, etaStr);
+    progressText = `\x1b[?7l${progressText}\x1b[?7h`; // no auto wrap
 
     if (this.firstWrite) {
       this.firstWrite = false;

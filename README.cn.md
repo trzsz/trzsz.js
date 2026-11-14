@@ -1,13 +1,13 @@
-# trzsz.js ( trz / tsz ) - 让 JS 终端支持 trzsz
+# trzsz.js – 为 Web SSH 与终端应用添加 trzsz 支持
 
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg?style=flat)](https://choosealicense.com/licenses/mit/)
 [![npmjs trzsz](https://img.shields.io/npm/v/trzsz.svg?style=flat)](https://www.npmjs.com/package/trzsz)
 [![WebSite](https://img.shields.io/badge/WebSite-https%3A%2F%2Ftrzsz.github.io%2Fjs-blue?style=flat)](https://trzsz.github.io/js)
 [![中文文档](https://img.shields.io/badge/%E4%B8%AD%E6%96%87%E6%96%87%E6%A1%A3-https%3A%2F%2Ftrzsz.github.io%2Fcn%2Fjs-blue?style=flat)](https://trzsz.github.io/cn/js)
 
-`trzsz.js` 使 webshell 和用 electron 开发的终端支持 [trzsz](https://trzsz.github.io/cn/) ( trz / tsz —— 和 rz / sz 类似、兼容 tmux )。
+**trzsz.js** 使 Web SSH 终端、WebShell 以及 Electron 终端应用可以原生支持 trzsz（trz / tsz）文件传输能力。
 
-_有关 `trzsz ( trz / tsz )` 更详细的文档，请查看 [https://trzsz.github.io/cn](https://trzsz.github.io/cn/)。_
+_有关 `trzsz ( trz / tsz )` 更详细的文档，请查看 [https://trzsz.github.io/cn/py](https://trzsz.github.io/cn/py)。_
 
 ## 开发指引
 

@@ -1,9 +1,5 @@
 name: Build trzsz.js and run test
-on:
-  push:
-    paths-ignore:
-      - "README.md"
-      - "examples/**"
+on: [push, pull_request]
 jobs:
   build:
     name: Build trzsz.js

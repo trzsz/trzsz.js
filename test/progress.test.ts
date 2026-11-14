@@ -11,6 +11,7 @@ import { TextProgressBar, getEllipsisString } from "../src/progress";
 function outputLength(str: string): number {
   return str
     .replace("\r", "")
+    .replace(/\x1b\[\?7[lh]/g, "")
     .replace(/\u001b\[\d+[mD]/g, "")
     .replace(/[\u4e00-\u9fa5]/g, "**").length;
 }
@@ -128,7 +129,7 @@ test("progress bar newest speed", () => {
     const second = Math.round(eta % 60).toString();
     expect(writer.mock.calls[i][0]).toContain("中文😀test.txt [");
     expect(writer.mock.calls[i][0]).toContain(
-      `] ${percentage}% | ${totalStr} | ${speedStr} B/s | ${minute.padStart(2, "0")}:${second.padStart(2, "0")} ETA`
+      `] ${percentage}% | ${totalStr} | ${speedStr} B/s | ${minute.padStart(2, "0")}:${second.padStart(2, "0")} ETA`,
     );
     expect(outputLength(writer.mock.calls[i][0])).toBe(100);
   }
@@ -270,7 +271,7 @@ test("progress bar no bar", () => {
   tgb.onStep(300);
   expect(writer.mock.calls.length).toBe(1);
   expect(dateNowSpy.mock.calls.length).toBe(2);
-  expect(writer.mock.calls[0][0].replace("\r", "")).toBe("30%");
+  expect(writer.mock.calls[0][0].replace("\r", "").replace(/\x1b\[\?7[lh]/g, "")).toBe("30%");
 });
 
 test("progress bar multiple files", () => {

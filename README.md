@@ -1,15 +1,15 @@
-# trzsz.js ( trz / tsz ) - the js version of trzsz
+## trzsz.js – Add trzsz (trz / tsz) Support to Web SSH and Terminal Apps
 
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg?style=flat)](https://choosealicense.com/licenses/mit/)
 [![npmjs trzsz](https://img.shields.io/npm/v/trzsz.svg?style=flat)](https://www.npmjs.com/package/trzsz)
 [![WebSite](https://img.shields.io/badge/WebSite-https%3A%2F%2Ftrzsz.github.io%2Fjs-blue?style=flat)](https://trzsz.github.io/js)
 [![中文文档](https://img.shields.io/badge/%E4%B8%AD%E6%96%87%E6%96%87%E6%A1%A3-https%3A%2F%2Ftrzsz.github.io%2Fcn%2Fjs-blue?style=flat)](https://trzsz.github.io/cn/js)
 
-`trzsz.js` makes terminal built with electron and webshell to support [trzsz](https://trzsz.github.io/) ( trz / tsz ), which similar to ( rz / sz ), and compatible with tmux.
+**trzsz.js** enables Web SSH terminals, webshells, and Electron-based terminal applications to natively support trzsz (trz / tsz), a tmux-compatible file transfer protocol similar to `lrzsz` (rz / sz).
 
-_Please check [https://trzsz.github.io](https://trzsz.github.io) for more information about `trzsz ( trz / tsz )`._
+_Please check [https://trzsz.github.io/py](https://trzsz.github.io/py) for more information about `trzsz ( trz / tsz )`._
 
-## Getting Started
+### Getting Started
 
 - Install the module
 
@@ -141,7 +141,7 @@ _Please check [https://trzsz.github.io](https://trzsz.github.io) for more inform
   terminal.loadAddon(trzszAddon);
   ```
 
-## Examples
+### Examples
 
 - [Browser](https://github.com/trzsz/trzsz.js/blob/main/examples/browser) web shell example.
 
@@ -149,17 +149,17 @@ _Please check [https://trzsz.github.io](https://trzsz.github.io) for more inform
 
 - [TrzszAddon](https://github.com/trzsz/trzsz.js/blob/main/examples/addon) xterm addon example.
 
-## Screenshot
+### Screenshot
 
-#### upload and download files in web browser
+##### upload and download files in web browser
 
 ![browser example](https://trzsz.github.io/images/browser.gif)
 
-#### upload and download files in electron app
+##### upload and download files in electron app
 
 ![electron example](https://trzsz.github.io/images/electron.gif)
 
-## Contact
+### Contact
 
 Feel free to email the author <lonnywong@qq.com>, or create an [issue](https://github.com/trzsz/trzsz.js/issues). Welcome to join the QQ group: 318578930.
 
