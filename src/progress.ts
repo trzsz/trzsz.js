@@ -7,28 +7,19 @@
 /* eslint-disable require-jsdoc */
 
 import { ProgressCallback } from "./comm";
-
-function getLength(str: string): number {
-  return str.replace(/[\u4e00-\u9fa5]/g, "**").length;
-}
+import { getCharWidth, getStringWidth } from "./width";
 
 export function getEllipsisString(str: string, max: number) {
-  max -= 3;
+  max = Math.max(0, max - 3);
   let len = 0;
   let sub = "";
-  for (let i = 0; i < str.length; i++) {
-    if (str.charCodeAt(i) >= 0x4e00 && str.charCodeAt(i) <= 0x9fa5) {
-      if (len + 2 > max) {
-        return { sub: sub + "...", len: len + 3 };
-      }
-      len += 2;
-    } else {
-      if (len + 1 > max) {
-        return { sub: sub + "...", len: len + 3 };
-      }
-      len += 1;
+  for (const character of str) {
+    const width = getCharWidth(character);
+    if (len + width > max) {
+      break;
     }
-    sub += str[i];
+    sub += character;
+    len += width;
   }
   return { sub: sub + "...", len: len + 3 };
 }
@@ -220,7 +211,7 @@ export class TextProgressBar implements ProgressCallback {
   private getProgressText(percentage: string, total: string, speed: string, eta: string) {
     const barMinLength = 24;
     let left = this.fileCount > 1 ? `(${this.fileIdx}/${this.fileCount}) ${this.fileName}` : this.fileName;
-    let leftLength = getLength(left);
+    let leftLength = getStringWidth(left);
     let right = ` ${percentage} | ${total} | ${speed} | ${eta}`;
 
     do {
