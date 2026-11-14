@@ -1,6 +1,6 @@
 {
   "name": "trzsz",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "Making webshell and terminal supports trzsz ( trz / tsz ), which similar to ( rz / sz ), and compatible with tmux.",
   "main": "lib/trzsz.js",
   "types": "lib/trzsz.d.ts",
