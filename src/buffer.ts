@@ -119,7 +119,7 @@ export class TrzszBuffer {
       let next = await this.nextBuffer();
       const newLineIdx = next.indexOf(0x0a); // '\n'
       if (newLineIdx >= 0) {
-        this.nextIdx += newLineIdx + 1; // +1 to ignroe the '\n'
+        this.nextIdx += newLineIdx + 1; // +1 to ignore '\n'
         next = next.subarray(0, newLineIdx);
       } else {
         this.nextIdx += next.length;
@@ -170,7 +170,10 @@ export class TrzszBuffer {
       let next = await this.nextBuffer();
       const newLineIdx = next.indexOf(0x21); // '!'
       if (newLineIdx >= 0) {
-        this.nextIdx += newLineIdx + 1; // +1 to ignroe the '\n'
+        this.nextIdx += newLineIdx + 1; // +1 to ignore '!'
+        if (this.nextIdx < this.nextBuf!.length && this.nextBuf![this.nextIdx] === 0x0a) {
+          this.nextIdx++; // ignore '\n' following '!'
+        }
         next = next.subarray(0, newLineIdx);
       } else {
         this.nextIdx += next.length;
